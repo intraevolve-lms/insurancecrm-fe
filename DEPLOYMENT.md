@@ -1,7 +1,7 @@
 # Deployment
 
 For the full picture (architecture, MongoDB Atlas setup, backups, docker-compose usage), see the
-backend repo's [DEPLOYMENT.md](https://github.com/Nawaz027/insurancecrm/blob/master/DEPLOYMENT.md).
+backend repo's [DEPLOYMENT.md](https://github.com/intraevolve-lms/insurancecrm/blob/master/DEPLOYMENT.md).
 This file covers only what's specific to this frontend image.
 
 > **Verified locally on 2026-07-05**, built and run together with the backend and a local
@@ -26,7 +26,7 @@ container start, since it's compiled into the nginx config at image build time).
 ## CI/CD
 
 `.github/workflows/docker-publish.yml` builds and pushes to **GitHub Container Registry**
-(`ghcr.io/nawaz027/insuredindex-fe`) on every push to `main`/`master`, authenticating with the
+(`ghcr.io/intraevolve-lms/insuredindex-fe`) on every push to `main`/`master`, authenticating with the
 automatic per-run `GITHUB_TOKEN` — no repo secrets to configure. Each push tags `:latest`,
 `:<commit-sha>`, and `:v<run-number>` (this repo's own build counter — independent from the
 backend's). See the backend's DEPLOYMENT.md for the one-time step to flip the package to public
