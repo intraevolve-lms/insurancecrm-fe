@@ -25,10 +25,12 @@ container start, since it's compiled into the nginx config at image build time).
 
 ## CI/CD
 
-`.github/workflows/docker-publish.yml` builds and pushes to Docker Hub
-(`nawaz027/insuredindex-fe`) on every push to `main`/`master`. Needs the same
-`DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN` repo secrets as the backend — see the backend's
-DEPLOYMENT.md for how to generate the token.
+`.github/workflows/docker-publish.yml` builds and pushes to **GitHub Container Registry**
+(`ghcr.io/nawaz027/insuredindex-fe`) on every push to `main`/`master`, authenticating with the
+automatic per-run `GITHUB_TOKEN` — no repo secrets to configure. Each push tags `:latest`,
+`:<commit-sha>`, and `:v<run-number>` (this repo's own build counter — independent from the
+backend's). See the backend's DEPLOYMENT.md for the one-time step to flip the package to public
+after its first push, and for how `FRONTEND_TAG` is used to roll back a specific build.
 
 ## Verifying a build locally
 
