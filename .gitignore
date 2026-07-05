@@ -1,0 +1,21 @@
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Env files are environment-specific — not meant to be committed
+.env
+.env.*
+
+# Editor
+.vscode/
+.idea/
+.claude/
+
+# Build/test artifacts
+*.tsbuildinfo
+coverage/
+
+# OS
+.DS_Store
+Thumbs.db
