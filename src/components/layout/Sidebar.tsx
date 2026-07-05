@@ -1,10 +1,11 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Users, Award,
-  UserCog, Shield, LogOut, X, TrendingUp,
+  UserCog, LogOut, X, TrendingUp, KeyRound,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { queryClient } from '@/lib/queryClient'
+import logoIcon from '@/assets/logo-icon.png'
 
 const navItems = [
   { to: '/dashboard',        label: 'Dashboard',        Icon: LayoutDashboard },
@@ -38,11 +39,9 @@ export function Sidebar({ onClose }: Props) {
       {/* Logo + close button (mobile) */}
       <div className="flex items-center justify-between px-4 h-16 border-b border-white/10 flex-shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-md bg-[#FF7A59] flex items-center justify-center flex-shrink-0">
-            <Shield className="h-4 w-4 text-white" />
-          </div>
+          <img src={logoIcon} alt="InsuredIndex" className="w-8 h-8 object-contain flex-shrink-0" />
           <div>
-            <p className="text-sm font-bold text-white leading-tight">InsuranceCRM</p>
+            <p className="text-sm font-bold text-white leading-tight">InsuredIndex</p>
             <p className="text-[10px] text-white/50 leading-tight">Renewal Manager</p>
           </div>
         </div>
@@ -116,6 +115,14 @@ export function Sidebar({ onClose }: Props) {
             {role}
           </span>
         </div>
+        <NavLink
+          to="/change-password"
+          onClick={handleNavClick}
+          className="w-full flex items-center gap-2.5 rounded px-3 py-2 text-[13px] font-medium text-white/50 hover:bg-white/10 hover:text-white transition-colors duration-100"
+        >
+          <KeyRound className="h-4 w-4" />
+          Change password
+        </NavLink>
         <button
           onClick={handleLogout}
           className="w-full flex items-center gap-2.5 rounded px-3 py-2 text-[13px] font-medium text-white/50 hover:bg-white/10 hover:text-white transition-colors duration-100"

@@ -4,8 +4,9 @@ For the full picture (architecture, MongoDB Atlas setup, backups, docker-compose
 backend repo's [DEPLOYMENT.md](https://github.com/Nawaz027/insurancecrm/blob/master/DEPLOYMENT.md).
 This file covers only what's specific to this frontend image.
 
-> **Not yet tested against a real Docker daemon** — Docker wasn't available in the environment
-> this was written in. Run a local `docker build` (below) before relying on it in production.
+> **Verified locally on 2026-07-05**, built and run together with the backend and a local
+> MongoDB via the backend repo's `docker-compose.local.yml` — SPA loads, and `/api/` proxies
+> through to the backend correctly (login + an authenticated call both returned 200).
 
 ## Image
 
@@ -25,15 +26,15 @@ container start, since it's compiled into the nginx config at image build time).
 ## CI/CD
 
 `.github/workflows/docker-publish.yml` builds and pushes to Docker Hub
-(`nawaz027/insurancecrm-fe`) on every push to `main`/`master`. Needs the same
+(`nawaz027/insuredindex-fe`) on every push to `main`/`master`. Needs the same
 `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN` repo secrets as the backend — see the backend's
 DEPLOYMENT.md for how to generate the token.
 
-## Verifying a build locally (not yet done — see caveat above)
+## Verifying a build locally
 
 ```bash
-docker build -t insurancecrm-frontend .
-docker run --rm -p 8080:80 insurancecrm-frontend
+docker build -t insuredindex-frontend .
+docker run --rm -p 8080:80 insuredindex-frontend
 # → http://localhost:8080 (API calls will fail with no "backend" host reachable — that's expected
 #   when running this container alone, not through compose)
 ```

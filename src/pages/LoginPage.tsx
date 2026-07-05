@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
-import { Shield, Eye, EyeOff, ArrowRight } from 'lucide-react'
+import { Eye, EyeOff, ArrowRight } from 'lucide-react'
 import { authApi } from '@/api/auth'
 import { useAuthStore } from '@/store/authStore'
 import { queryClient } from '@/lib/queryClient'
+import logoIcon from '@/assets/logo-icon.png'
+import logoFull from '@/assets/logo-full.png'
 
 export default function LoginPage() {
   const navigate  = useNavigate()
@@ -33,10 +35,8 @@ export default function LoginPage() {
       {/* ── Left brand panel ── */}
       <div className="hidden lg:flex w-[44%] flex-col justify-between bg-[#33475B] p-12">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-[#FF7A59] flex items-center justify-center">
-            <Shield className="h-5 w-5 text-white" />
-          </div>
-          <span className="text-[17px] font-bold text-white tracking-tight">InsuranceCRM</span>
+          <img src={logoIcon} alt="InsuredIndex" className="w-9 h-9 object-contain" />
+          <span className="text-[17px] font-bold text-white tracking-tight">InsuredIndex</span>
         </div>
 
         <div className="space-y-5">
@@ -58,7 +58,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <p className="text-white/25 text-xs">© 2026 InsuranceCRM · All rights reserved</p>
+        <p className="text-white/25 text-xs">© 2026 InsuredIndex · All rights reserved</p>
       </div>
 
       {/* ── Right form panel ── */}
@@ -66,11 +66,8 @@ export default function LoginPage() {
         <div className="w-full max-w-[400px]">
 
           {/* Mobile logo */}
-          <div className="flex items-center gap-2.5 mb-10 lg:hidden">
-            <div className="w-8 h-8 rounded-lg bg-[#FF7A59] flex items-center justify-center">
-              <Shield className="h-4 w-4 text-white" />
-            </div>
-            <span className="text-base font-bold text-[#33475B]">InsuranceCRM</span>
+          <div className="mb-10 lg:hidden">
+            <img src={logoFull} alt="InsuredIndex" className="h-10 w-auto" />
           </div>
 
           <div className="mb-7">

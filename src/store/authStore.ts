@@ -10,8 +10,10 @@ interface AuthState {
   email: string | null
   role: Role | null
   isAuthenticated: boolean
-  login: (data: { token: string; refreshToken: string; userId: string; name: string; email: string; role: Role }) => void
+  mustChangePassword: boolean
+  login: (data: { token: string; refreshToken: string; userId: string; name: string; email: string; role: Role; mustChangePassword?: boolean }) => void
   setTokens: (data: { token: string; refreshToken: string }) => void
+  clearMustChangePassword: () => void
   logout: () => void
 }
 
@@ -25,6 +27,7 @@ export const useAuthStore = create<AuthState>()(
       email: null,
       role: null,
       isAuthenticated: false,
+      mustChangePassword: false,
       login: (data) =>
         set({
           token: data.token,
@@ -34,12 +37,14 @@ export const useAuthStore = create<AuthState>()(
           email: data.email,
           role: data.role,
           isAuthenticated: true,
+          mustChangePassword: data.mustChangePassword ?? false,
         }),
       setTokens: (data) =>
         set({
           token: data.token,
           refreshToken: data.refreshToken,
         }),
+      clearMustChangePassword: () => set({ mustChangePassword: false }),
       logout: () =>
         set({
           token: null,
@@ -49,6 +54,7 @@ export const useAuthStore = create<AuthState>()(
           email: null,
           role: null,
           isAuthenticated: false,
+          mustChangePassword: false,
         }),
     }),
     { name: 'crm-auth' },

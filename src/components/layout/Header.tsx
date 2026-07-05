@@ -120,7 +120,7 @@ export function Header({ onMenuClick }: Props) {
   const bellRef = useRef<HTMLDivElement>(null)
 
   const segment = '/' + pathname.split('/')[1]
-  const title = PAGE_TITLES[segment] ?? 'Insurance CRM'
+  const title = PAGE_TITLES[segment] ?? 'InsuredIndex'
   const isDetail = pathname.split('/').length > 2
 
   const { data } = useQuery({
