@@ -95,3 +95,29 @@ describe('CustomersPage outcome filtering', () => {
     await waitFor(() => expect(screen.getByText(/no customers found/i)).toBeInTheDocument())
   })
 })
+
+describe('CustomersPage — bulk Excel/CSV import and export are admin-only', () => {
+  it('an AGENT does not see the Import or Export buttons', async () => {
+    useAuthStore.getState().login({
+      token: 't', refreshToken: 'rt', userId: 'agent-1', name: 'Agent One', email: 'a@test.com', role: 'AGENT',
+    })
+    renderWithProviders('/customers')
+
+    await waitFor(() => expect(screen.getByText('Ringing Customer')).toBeInTheDocument())
+    expect(screen.queryByRole('button', { name: 'Import' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Export' })).not.toBeInTheDocument()
+    expect(screen.queryByTitle('Filter export by agent')).not.toBeInTheDocument()
+  })
+
+  it('an ADMIN sees the Import and Export buttons', async () => {
+    useAuthStore.getState().login({
+      token: 't', refreshToken: 'rt', userId: 'admin-1', name: 'Admin One', email: 'admin@test.com', role: 'ADMIN',
+    })
+    renderWithProviders('/customers')
+
+    await waitFor(() => expect(screen.getByText('Ringing Customer')).toBeInTheDocument())
+    expect(screen.getByRole('button', { name: 'Import' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Export' })).toBeInTheDocument()
+    expect(screen.getByTitle('Filter export by agent')).toBeInTheDocument()
+  })
+})

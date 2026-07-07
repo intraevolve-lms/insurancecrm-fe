@@ -232,23 +232,23 @@ export default function CustomersPage() {
         action={
           <div className="flex items-center gap-2">
             {role === 'ADMIN' && (
-              <select
-                className="form-select"
-                value={exportAgentId}
-                onChange={(e) => setExportAgentId(e.target.value)}
-                title="Filter export by agent"
-              >
-                <option value="">All Agents</option>
-                {agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-              </select>
-            )}
-            <button onClick={() => exportApi.exportCustomers(exportAgentId || undefined).catch(() => toast.error('Export failed'))} className="btn-secondary">
-              <Download className="h-4 w-4" /> Export
-            </button>
-            {role === 'ADMIN' && (
-              <button onClick={() => setImportOpen(true)} className="btn-secondary">
-                <Upload className="h-4 w-4" /> Import
-              </button>
+              <>
+                <select
+                  className="form-select"
+                  value={exportAgentId}
+                  onChange={(e) => setExportAgentId(e.target.value)}
+                  title="Filter export by agent"
+                >
+                  <option value="">All Agents</option>
+                  {agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+                <button onClick={() => exportApi.exportCustomers(exportAgentId || undefined).catch(() => toast.error('Export failed'))} className="btn-secondary">
+                  <Download className="h-4 w-4" /> Export
+                </button>
+                <button onClick={() => setImportOpen(true)} className="btn-secondary">
+                  <Upload className="h-4 w-4" /> Import
+                </button>
+              </>
             )}
             <button onClick={openCreate} className="btn-primary">
               <Plus className="h-4 w-4" /> Create Customer
