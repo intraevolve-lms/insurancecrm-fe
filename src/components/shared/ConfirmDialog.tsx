@@ -9,10 +9,11 @@ interface ConfirmDialogProps {
   onConfirm: () => void
   loading?: boolean
   destructive?: boolean
+  confirmLabel?: string
 }
 
 export function ConfirmDialog({
-  open, onOpenChange, title, description, onConfirm, loading, destructive,
+  open, onOpenChange, title, description, onConfirm, loading, destructive, confirmLabel,
 }: ConfirmDialogProps) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -46,7 +47,7 @@ export function ConfirmDialog({
             >
               {loading
                 ? <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                : destructive ? 'Delete' : 'Confirm'}
+                : confirmLabel ?? (destructive ? 'Delete' : 'Confirm')}
             </button>
           </div>
         </Dialog.Content>
