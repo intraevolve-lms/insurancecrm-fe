@@ -29,6 +29,11 @@ export interface Lead {
   updatedAt: string
 }
 
+export interface LeadSummary {
+  statusCounts: Record<LeadStatus, number>
+  outcomeCounts: Record<CommunicationOutcome, number>
+}
+
 export interface CreateLeadRequest {
   name: string
   phone: string

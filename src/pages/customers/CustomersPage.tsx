@@ -15,9 +15,12 @@ import { EmptyState } from '@/components/shared/EmptyState'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { ImportDialog } from '@/components/shared/ImportDialog'
 import { BulkAssignDialog } from '@/components/customers/BulkAssignDialog'
+import { Pagination } from '@/components/shared/Pagination'
 import { OUTCOME_META } from '@/components/shared/CommunicationTimeline'
 import type { Customer, CreateCustomerRequest } from '@/types/customer'
 import type { CommunicationOutcome } from '@/types/communication'
+
+const PAGE_SIZE = 20
 
 const EMPTY_FORM: CreateCustomerRequest = {
   name: '', phone: '', email: '', address: '', notes: '',
@@ -131,6 +134,9 @@ export default function CustomersPage() {
   const [selectedIds, setSelectedIds]     = useState<Set<string>>(new Set())
   const [bulkAssignOpen, setBulkAssignOpen] = useState(false)
   const [exportAgentId, setExportAgentId] = useState('')
+  const [page, setPage]                   = useState(0)
+  const [sortField, setSortField]         = useState<'premium' | 'expiryDate' | null>(null)
+  const [sortDir, setSortDir]             = useState<'asc' | 'desc'>('asc')
   const headerCheckboxRef                 = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -141,11 +147,20 @@ export default function CustomersPage() {
 
   useEffect(() => {
     setSelectedIds(new Set())
-  }, [debouncedSearch])
+    setPage(0)
+  }, [debouncedSearch, outcomeFilter, sortField, sortDir])
+
+  const listParams = {
+    page, size: PAGE_SIZE,
+    sortBy: sortField ?? undefined, sortDir,
+    outcome: outcomeFilter ?? undefined,
+  }
 
   const { data, isLoading } = useQuery({
-    queryKey: ['customers', userId, debouncedSearch],
-    queryFn: () => debouncedSearch.trim() ? customersApi.search(debouncedSearch.trim()) : customersApi.getAll(),
+    queryKey: ['customers', userId, debouncedSearch, page, sortField, sortDir, outcomeFilter],
+    queryFn: () => debouncedSearch.trim()
+      ? customersApi.search(debouncedSearch.trim(), listParams)
+      : customersApi.getAll(listParams),
   })
 
   const { data: agentsData } = useQuery({
@@ -154,28 +169,15 @@ export default function CustomersPage() {
     enabled: role === 'ADMIN',
   })
   const agents = (agentsData?.data ?? []).filter((u) => u.active)
-  const [sortField, setSortField] = useState<'premium' | 'expiryDate' | null>(null)
-  const [sortDir, setSortDir]     = useState<'asc' | 'desc'>('asc')
 
   const toggleSort = (field: 'premium' | 'expiryDate') => {
     if (sortField === field) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
     else { setSortField(field); setSortDir('asc') }
   }
 
-  const customers: Customer[] = (data?.data ?? [])
-    .filter((c) => !outcomeFilter || c.lastOutcome === outcomeFilter)
-    .sort((a, b) => {
-      if (!sortField) return 0
-      const av = sortField === 'premium' ? a.lastYearPremium : a.expiryDate
-      const bv = sortField === 'premium' ? b.lastYearPremium : b.expiryDate
-      if (av == null && bv == null) return 0
-      if (av == null) return 1
-      if (bv == null) return -1
-      const cmp = sortField === 'premium'
-        ? (av as number) - (bv as number)
-        : new Date(av).getTime() - new Date(bv).getTime()
-      return sortDir === 'asc' ? cmp : -cmp
-    })
+  const customers: Customer[] = data?.data.content ?? []
+  const totalElements = data?.data.totalElements ?? 0
+  const totalPages = data?.data.totalPages ?? 0
 
   const clearOutcomeFilter = () => {
     setOutcomeFilter(null)
@@ -227,7 +229,13 @@ export default function CustomersPage() {
   })
   const deleteMutation = useMutation({
     mutationFn: (id: string) => customersApi.delete(id),
-    onSuccess: () => { toast.success('Customer deleted'); setDeleteTarget(null); invalidate() },
+    onSuccess: () => {
+      toast.success('Customer deleted')
+      setDeleteTarget(null)
+      // Deleting the only row on a non-first page would otherwise strand the view on an empty page.
+      if (customers.length === 1 && page > 0) setPage((p) => p - 1)
+      invalidate()
+    },
     onError: () => toast.error('Failed to delete customer'),
   })
   const assignMutation = useMutation({
@@ -249,7 +257,7 @@ export default function CustomersPage() {
     <div>
       <PageHeader
         title="Customers"
-        description={`${customers.length} customer${customers.length !== 1 ? 's' : ''} total`}
+        description={`${totalElements} customer${totalElements !== 1 ? 's' : ''} total`}
         action={
           <div className="flex items-center gap-2">
             {role === 'ADMIN' && (
@@ -469,6 +477,13 @@ export default function CustomersPage() {
               ))}
             </tbody>
           </table>
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            totalElements={totalElements}
+            pageSize={PAGE_SIZE}
+            onPageChange={setPage}
+          />
         </div>
       )}
 

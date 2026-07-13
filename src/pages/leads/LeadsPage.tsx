@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as Dialog from '@radix-ui/react-dialog'
@@ -17,9 +17,12 @@ import { CommunicationTimeline, OUTCOME_META } from '@/components/shared/Communi
 import { LoadingSpinner } from '@/components/shared/LoadingSpinner'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
+import { Pagination } from '@/components/shared/Pagination'
 import type { Lead, CreateLeadRequest, LeadStatus, LeadSource } from '@/types/lead'
 import type { PolicyType } from '@/types/policy'
 import type { CommunicationOutcome } from '@/types/communication'
+
+const PAGE_SIZE = 20
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -200,6 +203,8 @@ export default function LeadsPage() {
   const qc = useQueryClient()
 
   const [search, setSearch]             = useState('')
+  const [debouncedSearch, setDebounced] = useState('')
+  const debounceRef                     = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [activeTab, setActiveTab]       = useState<LeadStatus | 'ALL'>(() => (searchParams.get('status') as LeadStatus) || 'ALL')
   const [outcomeFilter, setOutcomeFilter] = useState<CommunicationOutcome | null>(() => (searchParams.get('outcome') as CommunicationOutcome) || null)
   const [formOpen, setFormOpen]         = useState(false)
@@ -208,14 +213,39 @@ export default function LeadsPage() {
   const [lostTarget, setLostTarget]       = useState<Lead | null>(null)
   const [convertTarget, setConvert]       = useState<Lead | null>(null)
   const [activityLeadId, setActivityLead] = useState<string | null>(null)
+  const [page, setPage]                   = useState(0)
 
-  const { data, isLoading } = useQuery({ queryKey: ['leads'], queryFn: leadsApi.getAll })
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => setDebounced(search), 400)
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+  }, [search])
+
+  useEffect(() => {
+    setPage(0)
+  }, [activeTab, outcomeFilter, debouncedSearch])
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['leads', page, activeTab, outcomeFilter, debouncedSearch],
+    queryFn: () => leadsApi.getAll({
+      page, size: PAGE_SIZE,
+      status: activeTab === 'ALL' ? undefined : activeTab,
+      outcome: outcomeFilter ?? undefined,
+      q: debouncedSearch.trim() || undefined,
+    }),
+  })
+  const { data: summaryData } = useQuery({ queryKey: ['leads-summary'], queryFn: leadsApi.getSummary })
   const { data: usersData } = useQuery({ queryKey: ['users'], queryFn: usersApi.getAll, enabled: role === 'ADMIN' })
 
-  const allLeads: Lead[] = data?.data ?? []
+  const leads: Lead[] = data?.data.content ?? []
+  const totalElements = data?.data.totalElements ?? 0
+  const totalPages = data?.data.totalPages ?? 0
   const agents = (usersData?.data ?? []).filter((u) => u.active)
 
-  const invalidate = () => qc.invalidateQueries({ queryKey: ['leads'] })
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ['leads'] })
+    qc.invalidateQueries({ queryKey: ['leads-summary'] })
+  }
 
   const createMutation = useMutation({
     mutationFn: (d: CreateLeadRequest) => leadsApi.create(d),
@@ -246,7 +276,13 @@ export default function LeadsPage() {
   })
   const deleteMutation = useMutation({
     mutationFn: (id: string) => leadsApi.delete(id),
-    onSuccess: () => { toast.success('Lead deleted'); setDeleteTarget(null); invalidate() },
+    onSuccess: () => {
+      toast.success('Lead deleted')
+      setDeleteTarget(null)
+      // Deleting the only row on a non-first page would otherwise strand the view on an empty page.
+      if (leads.length === 1 && page > 0) setPage((p) => p - 1)
+      invalidate()
+    },
     onError: () => toast.error('Failed to delete lead'),
   })
 
@@ -257,25 +293,15 @@ export default function LeadsPage() {
     setSearchParams(next, { replace: true })
   }
 
-  // Filter
-  const filtered = allLeads.filter((l) => {
-    const matchTab = activeTab === 'ALL' || l.status === activeTab
-    const matchOutcome = !outcomeFilter
-      || (l.lastOutcome === outcomeFilter && l.status !== 'CONVERTED' && l.status !== 'LOST')
-    const q = search.toLowerCase()
-    const matchSearch = !q || l.name.toLowerCase().includes(q) || l.phone.includes(q)
-    return matchTab && matchOutcome && matchSearch
-  })
-
-  // Pipeline counts
+  // Pipeline counts — full-dataset, independent of the current page/filter on the list below
   const counts = STATUSES.reduce((acc, s) => {
-    acc[s.value] = allLeads.filter((l) => l.status === s.value).length
+    acc[s.value] = summaryData?.data.statusCounts[s.value] ?? 0
     return acc
   }, {} as Record<LeadStatus, number>)
 
-  // Outcome funnel counts — scoped to active leads, same as the outcome filter itself
+  // Outcome funnel counts — full-dataset, same source as the pipeline counts above
   const outcomeCounts = LEAD_OUTCOMES.reduce((acc, o) => {
-    acc[o] = allLeads.filter((l) => l.lastOutcome === o && l.status !== 'CONVERTED' && l.status !== 'LOST').length
+    acc[o] = summaryData?.data.outcomeCounts[o] ?? 0
     return acc
   }, {} as Record<CommunicationOutcome, number>)
 
@@ -365,7 +391,7 @@ export default function LeadsPage() {
 
       {isLoading ? (
         <LoadingSpinner className="py-24" />
-      ) : filtered.length === 0 ? (
+      ) : leads.length === 0 ? (
         <EmptyState
           icon={<TrendingUp className="h-6 w-6" />}
           title={activeTab === 'ALL' ? 'No leads yet' : `No ${statusMeta(activeTab as LeadStatus).label} leads`}
@@ -389,7 +415,7 @@ export default function LeadsPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((lead) => {
+              {leads.map((lead) => {
                 const meta = statusMeta(lead.status)
                 const isOverdue = lead.followUpDate && new Date(lead.followUpDate) < new Date() && lead.status !== 'CONVERTED' && lead.status !== 'LOST'
                 return (
@@ -549,6 +575,13 @@ export default function LeadsPage() {
               })}
             </tbody>
           </table>
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            totalElements={totalElements}
+            pageSize={PAGE_SIZE}
+            onPageChange={setPage}
+          />
         </div>
       )}
 

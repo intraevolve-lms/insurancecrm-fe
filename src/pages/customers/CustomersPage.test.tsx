@@ -22,10 +22,20 @@ const customers: Customer[] = [
   },
 ]
 
+function pageOf(list: Customer[]) {
+  return { content: list, page: 0, size: 20, totalElements: list.length, totalPages: 1 }
+}
+
 vi.mock('@/api/customers', () => ({
   customersApi: {
-    getAll: vi.fn(() => Promise.resolve({ success: true, message: 'ok', data: customers })),
-    search: vi.fn(() => Promise.resolve({ success: true, message: 'ok', data: customers })),
+    getAll: vi.fn((params: { outcome?: string } = {}) => {
+      const filtered = params.outcome ? customers.filter((c) => c.lastOutcome === params.outcome) : customers
+      return Promise.resolve({ success: true, message: 'ok', data: pageOf(filtered) })
+    }),
+    search: vi.fn((_q: string, params: { outcome?: string } = {}) => {
+      const filtered = params.outcome ? customers.filter((c) => c.lastOutcome === params.outcome) : customers
+      return Promise.resolve({ success: true, message: 'ok', data: pageOf(filtered) })
+    }),
   },
 }))
 

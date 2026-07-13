@@ -1,9 +1,20 @@
 import api from '@/lib/axios'
-import type { ApiResponse } from '@/types/api'
-import type { Lead, CreateLeadRequest, LeadStatus } from '@/types/lead'
+import type { ApiResponse, PagedResponse } from '@/types/api'
+import type { Lead, CreateLeadRequest, LeadStatus, LeadSummary } from '@/types/lead'
+import type { CommunicationOutcome } from '@/types/communication'
+
+export interface LeadListParams {
+  page?: number
+  size?: number
+  status?: LeadStatus
+  outcome?: CommunicationOutcome
+  q?: string
+}
 
 export const leadsApi = {
-  getAll: () => api.get<ApiResponse<Lead[]>>('/leads').then((r) => r.data),
+  getAll: (params: LeadListParams = {}) =>
+    api.get<ApiResponse<PagedResponse<Lead>>>('/leads', { params }).then((r) => r.data),
+  getSummary: () => api.get<ApiResponse<LeadSummary>>('/leads/summary').then((r) => r.data),
   getById: (id: string) => api.get<ApiResponse<Lead>>(`/leads/${id}`).then((r) => r.data),
   create: (data: CreateLeadRequest) =>
     api.post<ApiResponse<Lead>>('/leads', data).then((r) => r.data),
