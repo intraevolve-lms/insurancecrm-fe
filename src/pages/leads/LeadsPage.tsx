@@ -118,8 +118,8 @@ function LeadFormDialog({ open, onOpenChange, initial, onSave, loading, agents }
                   onChange={(e) => set('estimatedPremium', e.target.value ? parseFloat(e.target.value) : undefined)} />
               </div>
               <div className="col-span-2 sm:col-span-1 flex flex-col gap-1">
-                <label className="form-label">Follow-up Date</label>
-                <input className="form-input" type="date" value={form.followUpDate ?? ''} onChange={(e) => set('followUpDate', e.target.value || undefined)} />
+                <label className="form-label">Follow-up Date &amp; Time</label>
+                <input className="form-input" type="datetime-local" value={form.followUpDate ?? ''} onChange={(e) => set('followUpDate', e.target.value || undefined)} />
               </div>
               {role === 'ADMIN' && (
               <div className="col-span-2 sm:col-span-1 flex flex-col gap-1">
@@ -468,7 +468,7 @@ export default function LeadsPage() {
                         <span className={`flex items-center gap-1 text-xs font-medium ${isOverdue ? 'text-red-500' : 'text-[#516F90]'}`}>
                           {isOverdue && <AlertCircle className="h-3 w-3" />}
                           <Calendar className="h-3 w-3" />
-                          {format(new Date(lead.followUpDate), 'dd MMM')}
+                          {format(new Date(lead.followUpDate), 'dd MMM, h:mm a')}
                         </span>
                       ) : <span className="text-[#B0C1D4] text-xs">—</span>}
                     </td>
