@@ -12,3 +12,9 @@ export interface PagedResponse<T> {
   totalElements: number
   totalPages: number
 }
+
+export interface BulkDeleteResult {
+  requestedCount: number
+  deletedCount: number
+  notFoundIds: string[]
+}

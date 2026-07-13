@@ -133,6 +133,7 @@ export default function CustomersPage() {
   const [importOpen, setImportOpen]       = useState(false)
   const [selectedIds, setSelectedIds]     = useState<Set<string>>(new Set())
   const [bulkAssignOpen, setBulkAssignOpen] = useState(false)
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
   const [exportAgentId, setExportAgentId] = useState('')
   const [page, setPage]                   = useState(0)
   const [sortField, setSortField]         = useState<'premium' | 'expiryDate' | null>(null)
@@ -244,6 +245,18 @@ export default function CustomersPage() {
     onSuccess: () => { toast.success('Agent assigned'); setAssignTarget(null); setAgentId(''); invalidate() },
     onError: () => toast.error('Failed to assign agent'),
   })
+  const bulkDeleteMutation = useMutation({
+    mutationFn: (ids: string[]) => customersApi.bulkDelete(ids),
+    onSuccess: (res) => {
+      toast.success(`${res.data.deletedCount} customer${res.data.deletedCount !== 1 ? 's' : ''} deleted`)
+      setBulkDeleteOpen(false)
+      // Deleting everything on a non-first page would otherwise strand the view on an empty page.
+      if (selectedIds.size >= customers.length && page > 0) setPage((p) => p - 1)
+      setSelectedIds(new Set())
+      invalidate()
+    },
+    onError: () => toast.error('Failed to delete customers'),
+  })
 
   const openCreate = () => { setEditing(null); setDialogOpen(true) }
   const openEdit   = (c: Customer) => { setEditing(c); setDialogOpen(true) }
@@ -315,6 +328,9 @@ export default function CustomersPage() {
             </button>
             <button onClick={() => setBulkAssignOpen(true)} className="btn-primary text-xs px-3 py-1.5">
               <UserCog className="h-3.5 w-3.5" /> Assign to Agent
+            </button>
+            <button onClick={() => setBulkDeleteOpen(true)} className="btn-secondary text-xs px-3 py-1.5 text-red-500 hover:bg-red-50">
+              <Trash2 className="h-3.5 w-3.5" /> Delete Selected
             </button>
           </div>
         </div>
@@ -502,6 +518,16 @@ export default function CustomersPage() {
         description={`Are you sure you want to delete "${deleteTarget?.name}"? This cannot be undone.`}
         onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
         loading={deleteMutation.isPending}
+        destructive
+      />
+
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        title="Delete Customers"
+        description={`Are you sure you want to delete ${selectedIds.size} customer${selectedIds.size !== 1 ? 's' : ''}? This cannot be undone.`}
+        onConfirm={() => bulkDeleteMutation.mutate([...selectedIds])}
+        loading={bulkDeleteMutation.isPending}
         destructive
       />
 

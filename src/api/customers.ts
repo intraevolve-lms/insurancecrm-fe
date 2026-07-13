@@ -1,5 +1,5 @@
 import api from '@/lib/axios'
-import type { ApiResponse, PagedResponse } from '@/types/api'
+import type { ApiResponse, BulkDeleteResult, PagedResponse } from '@/types/api'
 import type { Customer, CreateCustomerRequest, BulkAssignResult } from '@/types/customer'
 import type { CommunicationOutcome } from '@/types/communication'
 
@@ -26,4 +26,6 @@ export const customersApi = {
   bulkAssignAgent: (customerIds: string[], agentId: string) =>
     api.patch<ApiResponse<BulkAssignResult>>('/customers/bulk-assign', { customerIds, agentId }).then((r) => r.data),
   delete: (id: string) => api.delete<ApiResponse<void>>(`/customers/${id}`).then((r) => r.data),
+  bulkDelete: (ids: string[]) =>
+    api.delete<ApiResponse<BulkDeleteResult>>('/customers/bulk-delete', { data: { ids } }).then((r) => r.data),
 }

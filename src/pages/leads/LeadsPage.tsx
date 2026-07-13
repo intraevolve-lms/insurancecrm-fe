@@ -214,6 +214,9 @@ export default function LeadsPage() {
   const [convertTarget, setConvert]       = useState<Lead | null>(null)
   const [activityLeadId, setActivityLead] = useState<string | null>(null)
   const [page, setPage]                   = useState(0)
+  const [selectedIds, setSelectedIds]     = useState<Set<string>>(new Set())
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+  const headerCheckboxRef                 = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
@@ -241,6 +244,35 @@ export default function LeadsPage() {
   const totalElements = data?.data.totalElements ?? 0
   const totalPages = data?.data.totalPages ?? 0
   const agents = (usersData?.data ?? []).filter((u) => u.active)
+
+  useEffect(() => {
+    const visibleIds = new Set(leads.map((l) => l.id))
+    setSelectedIds((prev) => {
+      const next = new Set([...prev].filter((id) => visibleIds.has(id)))
+      return next.size === prev.size ? prev : next
+    })
+  }, [leads])
+
+  useEffect(() => {
+    if (headerCheckboxRef.current) {
+      headerCheckboxRef.current.indeterminate =
+        selectedIds.size > 0 && selectedIds.size < leads.length
+    }
+  }, [selectedIds, leads.length])
+
+  const toggleAll = () => {
+    setSelectedIds((prev) =>
+      prev.size === leads.length ? new Set() : new Set(leads.map((l) => l.id))
+    )
+  }
+  const toggleOne = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['leads'] })
@@ -284,6 +316,18 @@ export default function LeadsPage() {
       invalidate()
     },
     onError: () => toast.error('Failed to delete lead'),
+  })
+  const bulkDeleteMutation = useMutation({
+    mutationFn: (ids: string[]) => leadsApi.bulkDelete(ids),
+    onSuccess: (res) => {
+      toast.success(`${res.data.deletedCount} lead${res.data.deletedCount !== 1 ? 's' : ''} deleted`)
+      setBulkDeleteOpen(false)
+      // Deleting everything on a non-first page would otherwise strand the view on an empty page.
+      if (selectedIds.size >= leads.length && page > 0) setPage((p) => p - 1)
+      setSelectedIds(new Set())
+      invalidate()
+    },
+    onError: () => toast.error('Failed to delete leads'),
   })
 
   const clearOutcomeFilter = () => {
@@ -383,6 +427,22 @@ export default function LeadsPage() {
         </div>
       )}
 
+      {role === 'ADMIN' && selectedIds.size > 0 && (
+        <div className="flex items-center justify-between rounded-lg bg-[#E5F5F8] border border-[#0091AE]/20 px-4 py-2.5 mb-4">
+          <p className="text-sm font-semibold text-[#0091AE]">
+            {selectedIds.size} lead{selectedIds.size !== 1 ? 's' : ''} selected
+          </p>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setSelectedIds(new Set())} className="btn-secondary text-xs px-3 py-1.5">
+              Clear
+            </button>
+            <button onClick={() => setBulkDeleteOpen(true)} className="btn-secondary text-xs px-3 py-1.5 text-red-500 hover:bg-red-50">
+              <Trash2 className="h-3.5 w-3.5" /> Delete Selected
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Search */}
       <div className="relative mb-4 max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#B0C1D4]" />
@@ -403,6 +463,16 @@ export default function LeadsPage() {
           <table className="hs-table">
             <thead>
               <tr>
+                {role === 'ADMIN' && (
+                  <th className="hs-th w-10">
+                    <input
+                      ref={headerCheckboxRef}
+                      type="checkbox"
+                      checked={leads.length > 0 && selectedIds.size === leads.length}
+                      onChange={toggleAll}
+                    />
+                  </th>
+                )}
                 <th className="hs-th">Lead</th>
                 <th className="hs-th">Contact</th>
                 <th className="hs-th">Source</th>
@@ -421,6 +491,15 @@ export default function LeadsPage() {
                 return (
                   <React.Fragment key={lead.id}>
                   <tr className="hs-tr">
+                    {role === 'ADMIN' && (
+                      <td className="hs-td">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(lead.id)}
+                          onChange={() => toggleOne(lead.id)}
+                        />
+                      </td>
+                    )}
                     {/* Lead name + notes */}
                     <td className="hs-td">
                       <p className="font-semibold text-[#33475B] leading-tight">{lead.name}</p>
@@ -561,7 +640,7 @@ export default function LeadsPage() {
                   {/* Expandable activity panel */}
                   {activityLeadId === lead.id && (
                     <tr>
-                      <td colSpan={9} className="bg-[#F5F8FA] px-6 py-4 border-b border-[#DFE3EB]">
+                      <td colSpan={role === 'ADMIN' ? 10 : 9} className="bg-[#F5F8FA] px-6 py-4 border-b border-[#DFE3EB]">
                         <CommunicationTimeline
                           entityType="lead"
                           entityId={lead.id}
@@ -621,6 +700,17 @@ export default function LeadsPage() {
         description={`Permanently delete "${deleteTarget?.name}"?`}
         onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
         loading={deleteMutation.isPending}
+        destructive
+      />
+
+      {/* Bulk delete confirm */}
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        title="Delete Leads"
+        description={`Are you sure you want to delete ${selectedIds.size} lead${selectedIds.size !== 1 ? 's' : ''}? This cannot be undone.`}
+        onConfirm={() => bulkDeleteMutation.mutate([...selectedIds])}
+        loading={bulkDeleteMutation.isPending}
         destructive
       />
     </div>
