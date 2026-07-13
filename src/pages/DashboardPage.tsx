@@ -36,7 +36,9 @@ const REMINDER_ICONS: Record<ReminderType, React.ElementType> = {
 function DashboardReminderRow({ r, navigate }: { r: import('@/types/reminder').Reminder; navigate: (path: string) => void }) {
   const Icon = REMINDER_ICONS[r.type]
   const handleClick = () => {
-    if (r.type === 'LEAD_FOLLOWUP') navigate('/leads')
+    // entityKind (not type) decides the destination — a COMMUNICATION_FOLLOWUP reminder can be
+    // logged against either a customer or a lead, and leads have no dedicated detail route.
+    if (r.entityKind === 'LEAD') navigate('/leads')
     else if (r.entityId) navigate(`/customers/${r.entityId}`)
   }
   return (
