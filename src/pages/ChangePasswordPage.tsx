@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Eye, EyeOff, ArrowRight } from 'lucide-react'
+import { Eye, EyeOff, ArrowRight, ShieldAlert } from 'lucide-react'
 import { authApi } from '@/api/auth'
 import { useAuthStore } from '@/store/authStore'
 import { queryClient } from '@/lib/queryClient'
@@ -10,12 +10,29 @@ import logoFull from '@/assets/logo-full.png'
 
 export default function ChangePasswordPage() {
   const navigate = useNavigate()
-  const { mustChangePassword, clearMustChangePassword, logout } = useAuthStore()
+  const { role, mustChangePassword, clearMustChangePassword, logout } = useAuthStore()
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword]         = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPwd, setShowPwd]                 = useState(false)
   const [error, setError]                     = useState('')
+
+  const handleSignOut = () => { logout(); queryClient.clear(); navigate('/login', { replace: true }) }
+
+  if (role !== 'ADMIN') {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#F5F8FA] px-8 gap-4">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-red-100">
+          <ShieldAlert className="h-8 w-8 text-red-500" />
+        </div>
+        <h2 className="text-xl font-semibold text-[#33475B]">Can't Change Password Here</h2>
+        <p className="text-sm text-[#516F90] text-center max-w-xs">
+          Agents can't change their own password. Ask an admin to set a new one for you from User Management.
+        </p>
+        <button onClick={handleSignOut} className="btn-secondary">Sign out</button>
+      </div>
+    )
+  }
 
   const mutation = useMutation({
     mutationFn: () => authApi.changePassword({ currentPassword, newPassword }),
@@ -35,8 +52,6 @@ export default function ChangePasswordPage() {
     if (newPassword !== confirmPassword) { setError('New password and confirmation do not match.'); return }
     mutation.mutate()
   }
-
-  const handleSignOut = () => { logout(); queryClient.clear(); navigate('/login', { replace: true }) }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#F5F8FA] px-8">

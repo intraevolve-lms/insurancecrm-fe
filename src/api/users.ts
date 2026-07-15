@@ -17,4 +17,6 @@ export const usersApi = {
   update: (id: string, data: CreateUserRequest) =>
     api.put<ApiResponse<User>>(`/users/${id}`, data).then((r) => r.data),
   deactivate: (id: string) => api.delete<ApiResponse<void>>(`/users/${id}`).then((r) => r.data),
+  forceLogout: (userIds: string[]) =>
+    api.post<ApiResponse<void>>('/users/force-logout', { userIds }).then((r) => r.data),
 }

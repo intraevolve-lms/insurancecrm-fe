@@ -22,10 +22,20 @@ const customers: Customer[] = [
   },
 ]
 
+function pageOf(list: Customer[]) {
+  return { content: list, page: 0, size: 20, totalElements: list.length, totalPages: 1 }
+}
+
 vi.mock('@/api/customers', () => ({
   customersApi: {
-    getAll: vi.fn(() => Promise.resolve({ success: true, message: 'ok', data: customers })),
-    search: vi.fn(() => Promise.resolve({ success: true, message: 'ok', data: customers })),
+    getAll: vi.fn((params: { outcome?: string } = {}) => {
+      const filtered = params.outcome ? customers.filter((c) => c.lastOutcome === params.outcome) : customers
+      return Promise.resolve({ success: true, message: 'ok', data: pageOf(filtered) })
+    }),
+    search: vi.fn((_q: string, params: { outcome?: string } = {}) => {
+      const filtered = params.outcome ? customers.filter((c) => c.lastOutcome === params.outcome) : customers
+      return Promise.resolve({ success: true, message: 'ok', data: pageOf(filtered) })
+    }),
   },
 }))
 
@@ -93,5 +103,31 @@ describe('CustomersPage outcome filtering', () => {
     renderWithProviders('/customers?outcome=NEXT_YEAR')
 
     await waitFor(() => expect(screen.getByText(/no customers found/i)).toBeInTheDocument())
+  })
+})
+
+describe('CustomersPage — bulk Excel/CSV import and export are admin-only', () => {
+  it('an AGENT does not see the Import or Export buttons', async () => {
+    useAuthStore.getState().login({
+      token: 't', refreshToken: 'rt', userId: 'agent-1', name: 'Agent One', email: 'a@test.com', role: 'AGENT',
+    })
+    renderWithProviders('/customers')
+
+    await waitFor(() => expect(screen.getByText('Ringing Customer')).toBeInTheDocument())
+    expect(screen.queryByRole('button', { name: 'Import' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Export' })).not.toBeInTheDocument()
+    expect(screen.queryByTitle('Filter export by agent')).not.toBeInTheDocument()
+  })
+
+  it('an ADMIN sees the Import and Export buttons', async () => {
+    useAuthStore.getState().login({
+      token: 't', refreshToken: 'rt', userId: 'admin-1', name: 'Admin One', email: 'admin@test.com', role: 'ADMIN',
+    })
+    renderWithProviders('/customers')
+
+    await waitFor(() => expect(screen.getByText('Ringing Customer')).toBeInTheDocument())
+    expect(screen.getByRole('button', { name: 'Import' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Export' })).toBeInTheDocument()
+    expect(screen.getByTitle('Filter export by agent')).toBeInTheDocument()
   })
 })

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as Dialog from '@radix-ui/react-dialog'
-import { Plus, Search, Eye, Pencil, Trash2, X, UserCircle, UserCog, Upload, Download, UserCheck } from 'lucide-react'
+import { Plus, Search, Eye, Pencil, Trash2, X, UserCircle, UserCog, Upload, Download, UserCheck, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { customersApi } from '@/api/customers'
@@ -15,9 +15,12 @@ import { EmptyState } from '@/components/shared/EmptyState'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { ImportDialog } from '@/components/shared/ImportDialog'
 import { BulkAssignDialog } from '@/components/customers/BulkAssignDialog'
+import { Pagination } from '@/components/shared/Pagination'
 import { OUTCOME_META } from '@/components/shared/CommunicationTimeline'
 import type { Customer, CreateCustomerRequest } from '@/types/customer'
 import type { CommunicationOutcome } from '@/types/communication'
+
+const PAGE_SIZE = 20
 
 const EMPTY_FORM: CreateCustomerRequest = {
   name: '', phone: '', email: '', address: '', notes: '',
@@ -130,7 +133,11 @@ export default function CustomersPage() {
   const [importOpen, setImportOpen]       = useState(false)
   const [selectedIds, setSelectedIds]     = useState<Set<string>>(new Set())
   const [bulkAssignOpen, setBulkAssignOpen] = useState(false)
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
   const [exportAgentId, setExportAgentId] = useState('')
+  const [page, setPage]                   = useState(0)
+  const [sortField, setSortField]         = useState<'premium' | 'expiryDate' | null>(null)
+  const [sortDir, setSortDir]             = useState<'asc' | 'desc'>('asc')
   const headerCheckboxRef                 = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -141,11 +148,20 @@ export default function CustomersPage() {
 
   useEffect(() => {
     setSelectedIds(new Set())
-  }, [debouncedSearch])
+    setPage(0)
+  }, [debouncedSearch, outcomeFilter, sortField, sortDir])
+
+  const listParams = {
+    page, size: PAGE_SIZE,
+    sortBy: sortField ?? undefined, sortDir,
+    outcome: outcomeFilter ?? undefined,
+  }
 
   const { data, isLoading } = useQuery({
-    queryKey: ['customers', userId, debouncedSearch],
-    queryFn: () => debouncedSearch.trim() ? customersApi.search(debouncedSearch.trim()) : customersApi.getAll(),
+    queryKey: ['customers', userId, debouncedSearch, page, sortField, sortDir, outcomeFilter],
+    queryFn: () => debouncedSearch.trim()
+      ? customersApi.search(debouncedSearch.trim(), listParams)
+      : customersApi.getAll(listParams),
   })
 
   const { data: agentsData } = useQuery({
@@ -154,7 +170,15 @@ export default function CustomersPage() {
     enabled: role === 'ADMIN',
   })
   const agents = (agentsData?.data ?? []).filter((u) => u.active)
-  const customers: Customer[] = (data?.data ?? []).filter((c) => !outcomeFilter || c.lastOutcome === outcomeFilter)
+
+  const toggleSort = (field: 'premium' | 'expiryDate') => {
+    if (sortField === field) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    else { setSortField(field); setSortDir('asc') }
+  }
+
+  const customers: Customer[] = data?.data.content ?? []
+  const totalElements = data?.data.totalElements ?? 0
+  const totalPages = data?.data.totalPages ?? 0
 
   const clearOutcomeFilter = () => {
     setOutcomeFilter(null)
@@ -206,7 +230,13 @@ export default function CustomersPage() {
   })
   const deleteMutation = useMutation({
     mutationFn: (id: string) => customersApi.delete(id),
-    onSuccess: () => { toast.success('Customer deleted'); setDeleteTarget(null); invalidate() },
+    onSuccess: () => {
+      toast.success('Customer deleted')
+      setDeleteTarget(null)
+      // Deleting the only row on a non-first page would otherwise strand the view on an empty page.
+      if (customers.length === 1 && page > 0) setPage((p) => p - 1)
+      invalidate()
+    },
     onError: () => toast.error('Failed to delete customer'),
   })
   const assignMutation = useMutation({
@@ -214,6 +244,18 @@ export default function CustomersPage() {
       customersApi.assignAgent(customerId, agentId),
     onSuccess: () => { toast.success('Agent assigned'); setAssignTarget(null); setAgentId(''); invalidate() },
     onError: () => toast.error('Failed to assign agent'),
+  })
+  const bulkDeleteMutation = useMutation({
+    mutationFn: (ids: string[]) => customersApi.bulkDelete(ids),
+    onSuccess: (res) => {
+      toast.success(`${res.data.deletedCount} customer${res.data.deletedCount !== 1 ? 's' : ''} deleted`)
+      setBulkDeleteOpen(false)
+      // Deleting everything on a non-first page would otherwise strand the view on an empty page.
+      if (selectedIds.size >= customers.length && page > 0) setPage((p) => p - 1)
+      setSelectedIds(new Set())
+      invalidate()
+    },
+    onError: () => toast.error('Failed to delete customers'),
   })
 
   const openCreate = () => { setEditing(null); setDialogOpen(true) }
@@ -228,27 +270,27 @@ export default function CustomersPage() {
     <div>
       <PageHeader
         title="Customers"
-        description={`${customers.length} customer${customers.length !== 1 ? 's' : ''} total`}
+        description={`${totalElements} customer${totalElements !== 1 ? 's' : ''} total`}
         action={
           <div className="flex items-center gap-2">
             {role === 'ADMIN' && (
-              <select
-                className="form-select"
-                value={exportAgentId}
-                onChange={(e) => setExportAgentId(e.target.value)}
-                title="Filter export by agent"
-              >
-                <option value="">All Agents</option>
-                {agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-              </select>
-            )}
-            <button onClick={() => exportApi.exportCustomers(exportAgentId || undefined).catch(() => toast.error('Export failed'))} className="btn-secondary">
-              <Download className="h-4 w-4" /> Export
-            </button>
-            {role === 'ADMIN' && (
-              <button onClick={() => setImportOpen(true)} className="btn-secondary">
-                <Upload className="h-4 w-4" /> Import
-              </button>
+              <>
+                <select
+                  className="form-select"
+                  value={exportAgentId}
+                  onChange={(e) => setExportAgentId(e.target.value)}
+                  title="Filter export by agent"
+                >
+                  <option value="">All Agents</option>
+                  {agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+                <button onClick={() => exportApi.exportCustomers(exportAgentId || undefined).catch(() => toast.error('Export failed'))} className="btn-secondary">
+                  <Download className="h-4 w-4" /> Export
+                </button>
+                <button onClick={() => setImportOpen(true)} className="btn-secondary">
+                  <Upload className="h-4 w-4" /> Import
+                </button>
+              </>
             )}
             <button onClick={openCreate} className="btn-primary">
               <Plus className="h-4 w-4" /> Create Customer
@@ -287,6 +329,9 @@ export default function CustomersPage() {
             <button onClick={() => setBulkAssignOpen(true)} className="btn-primary text-xs px-3 py-1.5">
               <UserCog className="h-3.5 w-3.5" /> Assign to Agent
             </button>
+            <button onClick={() => setBulkDeleteOpen(true)} className="btn-secondary text-xs px-3 py-1.5 text-red-500 hover:bg-red-50">
+              <Trash2 className="h-3.5 w-3.5" /> Delete Selected
+            </button>
           </div>
         </div>
       )}
@@ -316,9 +361,29 @@ export default function CustomersPage() {
                   </th>
                 )}
                 <th className="hs-th">Customer</th>
-                <th className="hs-th">Phone</th>
+                {role === 'ADMIN' && <th className="hs-th">Phone</th>}
                 <th className="hs-th">Email</th>
                 <th className="hs-th">Assigned To</th>
+                {role === 'ADMIN' && (
+                  <>
+                    <th className="hs-th">
+                      <button onClick={() => toggleSort('premium')} className="flex items-center gap-1 hover:text-[#0091AE] transition">
+                        Premium
+                        {sortField === 'premium'
+                          ? (sortDir === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)
+                          : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                      </button>
+                    </th>
+                    <th className="hs-th">
+                      <button onClick={() => toggleSort('expiryDate')} className="flex items-center gap-1 hover:text-[#0091AE] transition">
+                        Expiry Date
+                        {sortField === 'expiryDate'
+                          ? (sortDir === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)
+                          : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                      </button>
+                    </th>
+                  </>
+                )}
                 <th className="hs-th">Created</th>
                 <th className="hs-th">Actions</th>
               </tr>
@@ -347,7 +412,7 @@ export default function CustomersPage() {
                     )}
                   </td>
 
-                  <td className="hs-td text-[#516F90] whitespace-nowrap">{c.phone}</td>
+                  {role === 'ADMIN' && <td className="hs-td text-[#516F90] whitespace-nowrap">{c.phone}</td>}
                   <td className="hs-td text-[#516F90]">{c.email ?? '—'}</td>
 
                   {/* Smart Assigned To column */}
@@ -381,6 +446,17 @@ export default function CustomersPage() {
                       </div>
                     )}
                   </td>
+
+                  {role === 'ADMIN' && (
+                    <>
+                      <td className="hs-td text-[#33475B] font-medium whitespace-nowrap">
+                        {c.lastYearPremium != null ? `₹${c.lastYearPremium.toLocaleString('en-IN')}` : '—'}
+                      </td>
+                      <td className="hs-td text-[#516F90] whitespace-nowrap">
+                        {c.expiryDate ? format(new Date(c.expiryDate), 'dd MMM yyyy') : '—'}
+                      </td>
+                    </>
+                  )}
 
                   <td className="hs-td text-[#516F90] whitespace-nowrap">
                     {format(new Date(c.createdAt), 'dd MMM yyyy')}
@@ -417,6 +493,13 @@ export default function CustomersPage() {
               ))}
             </tbody>
           </table>
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            totalElements={totalElements}
+            pageSize={PAGE_SIZE}
+            onPageChange={setPage}
+          />
         </div>
       )}
 
@@ -435,6 +518,16 @@ export default function CustomersPage() {
         description={`Are you sure you want to delete "${deleteTarget?.name}"? This cannot be undone.`}
         onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
         loading={deleteMutation.isPending}
+        destructive
+      />
+
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        title="Delete Customers"
+        description={`Are you sure you want to delete ${selectedIds.size} customer${selectedIds.size !== 1 ? 's' : ''}? This cannot be undone.`}
+        onConfirm={() => bulkDeleteMutation.mutate([...selectedIds])}
+        loading={bulkDeleteMutation.isPending}
         destructive
       />
 

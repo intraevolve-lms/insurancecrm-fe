@@ -26,8 +26,37 @@ const leads: Lead[] = [
   },
 ]
 
+const CLOSED_STATUSES = ['CONVERTED', 'LOST']
+
+function computeSummary() {
+  const statusCounts: Record<string, number> = { NEW: 0, CONTACTED: 0, QUOTE_SENT: 0, NEGOTIATING: 0, CONVERTED: 0, LOST: 0 }
+  const outcomeCounts: Record<string, number> = {
+    MY_CALLBACK: 0, CALLBACK: 0, PROSPECT: 0, RINGING: 0, SWITCH_OFF: 0, HANG_UP: 0, NEXT_YEAR: 0, SALE_CLOSE: 0,
+  }
+  for (const l of leads) {
+    statusCounts[l.status] = (statusCounts[l.status] ?? 0) + 1
+    if (l.lastOutcome && !CLOSED_STATUSES.includes(l.status)) {
+      outcomeCounts[l.lastOutcome] = (outcomeCounts[l.lastOutcome] ?? 0) + 1
+    }
+  }
+  return { statusCounts, outcomeCounts }
+}
+
 vi.mock('@/api/leads', () => ({
-  leadsApi: { getAll: vi.fn(() => Promise.resolve({ success: true, message: 'ok', data: leads })) },
+  leadsApi: {
+    getAll: vi.fn((params: { status?: string; outcome?: string } = {}) => {
+      const filtered = leads.filter((l) => {
+        const matchStatus = !params.status || l.status === params.status
+        const matchOutcome = !params.outcome || (l.lastOutcome === params.outcome && !CLOSED_STATUSES.includes(l.status))
+        return matchStatus && matchOutcome
+      })
+      return Promise.resolve({
+        success: true, message: 'ok',
+        data: { content: filtered, page: 0, size: 20, totalElements: filtered.length, totalPages: 1 },
+      })
+    }),
+    getSummary: vi.fn(() => Promise.resolve({ success: true, message: 'ok', data: computeSummary() })),
+  },
 }))
 
 vi.mock('@/api/users', () => ({

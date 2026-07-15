@@ -4,6 +4,12 @@ import api from './axios'
 import { useAuthStore } from '@/store/authStore'
 import { queryClient } from '@/lib/queryClient'
 
+const toastWarning = vi.fn()
+
+vi.mock('sonner', () => ({
+  toast: { warning: (message: string) => toastWarning(message), success: vi.fn(), error: vi.fn() },
+}))
+
 const mock = new MockAdapter(api)
 
 function setLoggedIn(token = 'valid-access-token', refreshToken = 'valid-refresh-token') {
@@ -17,6 +23,7 @@ describe('axios interceptors', () => {
     mock.reset()
     useAuthStore.getState().logout()
     queryClient.clear()
+    toastWarning.mockClear()
     Object.defineProperty(window, 'location', {
       configurable: true,
       value: { ...window.location, href: '' },
@@ -88,6 +95,45 @@ describe('axios interceptors', () => {
     expect(useAuthStore.getState().token).toBeNull()
     expect(clearSpy).toHaveBeenCalled()
     expect(window.location.href).toBe('/login')
+  })
+
+  it('surfaces the backend\'s inactivity-timeout message when the refresh call is rejected for it', async () => {
+    // Mirrors AuthService.refresh on the backend: an agent idle past the server-side timeout
+    // gets a 403 on /auth/refresh with this exact message.
+    setLoggedIn('expired-token', 'idle-refresh-token')
+
+    mock.onGet('/customers').reply(401)
+    mock.onPost('/auth/refresh').reply(403, {
+      success: false, message: 'Your session expired due to inactivity — please log in again',
+    })
+
+    await expect(api.get('/customers')).rejects.toBeTruthy()
+
+    expect(toastWarning).toHaveBeenCalledWith('Your session expired due to inactivity — please log in again')
+  })
+
+  it('surfaces the backend\'s admin-force-logout message when the refresh call is rejected for it', async () => {
+    setLoggedIn('expired-token', 'revoked-refresh-token')
+
+    mock.onGet('/customers').reply(401)
+    mock.onPost('/auth/refresh').reply(403, {
+      success: false, message: 'Your session was ended by an administrator — please log in again',
+    })
+
+    await expect(api.get('/customers')).rejects.toBeTruthy()
+
+    expect(toastWarning).toHaveBeenCalledWith('Your session was ended by an administrator — please log in again')
+  })
+
+  it('does not show a toast when the refresh call fails with no message body', async () => {
+    setLoggedIn('expired-token', 'bad-refresh-token')
+
+    mock.onGet('/customers').reply(401)
+    mock.onPost('/auth/refresh').reply(403)
+
+    await expect(api.get('/customers')).rejects.toBeTruthy()
+
+    expect(toastWarning).not.toHaveBeenCalled()
   })
 
   it('a 401 from /auth/login itself does not trigger the refresh/logout flow', async () => {

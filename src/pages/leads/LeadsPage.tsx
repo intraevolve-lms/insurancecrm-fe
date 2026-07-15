@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as Dialog from '@radix-ui/react-dialog'
@@ -17,9 +17,12 @@ import { CommunicationTimeline, OUTCOME_META } from '@/components/shared/Communi
 import { LoadingSpinner } from '@/components/shared/LoadingSpinner'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
+import { Pagination } from '@/components/shared/Pagination'
 import type { Lead, CreateLeadRequest, LeadStatus, LeadSource } from '@/types/lead'
 import type { PolicyType } from '@/types/policy'
 import type { CommunicationOutcome } from '@/types/communication'
+
+const PAGE_SIZE = 20
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -118,8 +121,8 @@ function LeadFormDialog({ open, onOpenChange, initial, onSave, loading, agents }
                   onChange={(e) => set('estimatedPremium', e.target.value ? parseFloat(e.target.value) : undefined)} />
               </div>
               <div className="col-span-2 sm:col-span-1 flex flex-col gap-1">
-                <label className="form-label">Follow-up Date</label>
-                <input className="form-input" type="date" value={form.followUpDate ?? ''} onChange={(e) => set('followUpDate', e.target.value || undefined)} />
+                <label className="form-label">Follow-up Date &amp; Time</label>
+                <input className="form-input" type="datetime-local" value={form.followUpDate ?? ''} onChange={(e) => set('followUpDate', e.target.value || undefined)} />
               </div>
               {role === 'ADMIN' && (
               <div className="col-span-2 sm:col-span-1 flex flex-col gap-1">
@@ -200,6 +203,8 @@ export default function LeadsPage() {
   const qc = useQueryClient()
 
   const [search, setSearch]             = useState('')
+  const [debouncedSearch, setDebounced] = useState('')
+  const debounceRef                     = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [activeTab, setActiveTab]       = useState<LeadStatus | 'ALL'>(() => (searchParams.get('status') as LeadStatus) || 'ALL')
   const [outcomeFilter, setOutcomeFilter] = useState<CommunicationOutcome | null>(() => (searchParams.get('outcome') as CommunicationOutcome) || null)
   const [formOpen, setFormOpen]         = useState(false)
@@ -208,14 +213,71 @@ export default function LeadsPage() {
   const [lostTarget, setLostTarget]       = useState<Lead | null>(null)
   const [convertTarget, setConvert]       = useState<Lead | null>(null)
   const [activityLeadId, setActivityLead] = useState<string | null>(null)
+  const [page, setPage]                   = useState(0)
+  const [selectedIds, setSelectedIds]     = useState<Set<string>>(new Set())
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+  const headerCheckboxRef                 = useRef<HTMLInputElement>(null)
 
-  const { data, isLoading } = useQuery({ queryKey: ['leads'], queryFn: leadsApi.getAll })
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => setDebounced(search), 400)
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+  }, [search])
+
+  useEffect(() => {
+    setPage(0)
+  }, [activeTab, outcomeFilter, debouncedSearch])
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['leads', page, activeTab, outcomeFilter, debouncedSearch],
+    queryFn: () => leadsApi.getAll({
+      page, size: PAGE_SIZE,
+      status: activeTab === 'ALL' ? undefined : activeTab,
+      outcome: outcomeFilter ?? undefined,
+      q: debouncedSearch.trim() || undefined,
+    }),
+  })
+  const { data: summaryData } = useQuery({ queryKey: ['leads-summary'], queryFn: leadsApi.getSummary })
   const { data: usersData } = useQuery({ queryKey: ['users'], queryFn: usersApi.getAll, enabled: role === 'ADMIN' })
 
-  const allLeads: Lead[] = data?.data ?? []
+  const leads: Lead[] = data?.data.content ?? []
+  const totalElements = data?.data.totalElements ?? 0
+  const totalPages = data?.data.totalPages ?? 0
   const agents = (usersData?.data ?? []).filter((u) => u.active)
 
-  const invalidate = () => qc.invalidateQueries({ queryKey: ['leads'] })
+  useEffect(() => {
+    const visibleIds = new Set(leads.map((l) => l.id))
+    setSelectedIds((prev) => {
+      const next = new Set([...prev].filter((id) => visibleIds.has(id)))
+      return next.size === prev.size ? prev : next
+    })
+  }, [leads])
+
+  useEffect(() => {
+    if (headerCheckboxRef.current) {
+      headerCheckboxRef.current.indeterminate =
+        selectedIds.size > 0 && selectedIds.size < leads.length
+    }
+  }, [selectedIds, leads.length])
+
+  const toggleAll = () => {
+    setSelectedIds((prev) =>
+      prev.size === leads.length ? new Set() : new Set(leads.map((l) => l.id))
+    )
+  }
+  const toggleOne = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ['leads'] })
+    qc.invalidateQueries({ queryKey: ['leads-summary'] })
+  }
 
   const createMutation = useMutation({
     mutationFn: (d: CreateLeadRequest) => leadsApi.create(d),
@@ -246,8 +308,26 @@ export default function LeadsPage() {
   })
   const deleteMutation = useMutation({
     mutationFn: (id: string) => leadsApi.delete(id),
-    onSuccess: () => { toast.success('Lead deleted'); setDeleteTarget(null); invalidate() },
+    onSuccess: () => {
+      toast.success('Lead deleted')
+      setDeleteTarget(null)
+      // Deleting the only row on a non-first page would otherwise strand the view on an empty page.
+      if (leads.length === 1 && page > 0) setPage((p) => p - 1)
+      invalidate()
+    },
     onError: () => toast.error('Failed to delete lead'),
+  })
+  const bulkDeleteMutation = useMutation({
+    mutationFn: (ids: string[]) => leadsApi.bulkDelete(ids),
+    onSuccess: (res) => {
+      toast.success(`${res.data.deletedCount} lead${res.data.deletedCount !== 1 ? 's' : ''} deleted`)
+      setBulkDeleteOpen(false)
+      // Deleting everything on a non-first page would otherwise strand the view on an empty page.
+      if (selectedIds.size >= leads.length && page > 0) setPage((p) => p - 1)
+      setSelectedIds(new Set())
+      invalidate()
+    },
+    onError: () => toast.error('Failed to delete leads'),
   })
 
   const clearOutcomeFilter = () => {
@@ -257,25 +337,15 @@ export default function LeadsPage() {
     setSearchParams(next, { replace: true })
   }
 
-  // Filter
-  const filtered = allLeads.filter((l) => {
-    const matchTab = activeTab === 'ALL' || l.status === activeTab
-    const matchOutcome = !outcomeFilter
-      || (l.lastOutcome === outcomeFilter && l.status !== 'CONVERTED' && l.status !== 'LOST')
-    const q = search.toLowerCase()
-    const matchSearch = !q || l.name.toLowerCase().includes(q) || l.phone.includes(q)
-    return matchTab && matchOutcome && matchSearch
-  })
-
-  // Pipeline counts
+  // Pipeline counts — full-dataset, independent of the current page/filter on the list below
   const counts = STATUSES.reduce((acc, s) => {
-    acc[s.value] = allLeads.filter((l) => l.status === s.value).length
+    acc[s.value] = summaryData?.data.statusCounts[s.value] ?? 0
     return acc
   }, {} as Record<LeadStatus, number>)
 
-  // Outcome funnel counts — scoped to active leads, same as the outcome filter itself
+  // Outcome funnel counts — full-dataset, same source as the pipeline counts above
   const outcomeCounts = LEAD_OUTCOMES.reduce((acc, o) => {
-    acc[o] = allLeads.filter((l) => l.lastOutcome === o && l.status !== 'CONVERTED' && l.status !== 'LOST').length
+    acc[o] = summaryData?.data.outcomeCounts[o] ?? 0
     return acc
   }, {} as Record<CommunicationOutcome, number>)
 
@@ -357,6 +427,22 @@ export default function LeadsPage() {
         </div>
       )}
 
+      {role === 'ADMIN' && selectedIds.size > 0 && (
+        <div className="flex items-center justify-between rounded-lg bg-[#E5F5F8] border border-[#0091AE]/20 px-4 py-2.5 mb-4">
+          <p className="text-sm font-semibold text-[#0091AE]">
+            {selectedIds.size} lead{selectedIds.size !== 1 ? 's' : ''} selected
+          </p>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setSelectedIds(new Set())} className="btn-secondary text-xs px-3 py-1.5">
+              Clear
+            </button>
+            <button onClick={() => setBulkDeleteOpen(true)} className="btn-secondary text-xs px-3 py-1.5 text-red-500 hover:bg-red-50">
+              <Trash2 className="h-3.5 w-3.5" /> Delete Selected
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Search */}
       <div className="relative mb-4 max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#B0C1D4]" />
@@ -365,7 +451,7 @@ export default function LeadsPage() {
 
       {isLoading ? (
         <LoadingSpinner className="py-24" />
-      ) : filtered.length === 0 ? (
+      ) : leads.length === 0 ? (
         <EmptyState
           icon={<TrendingUp className="h-6 w-6" />}
           title={activeTab === 'ALL' ? 'No leads yet' : `No ${statusMeta(activeTab as LeadStatus).label} leads`}
@@ -377,6 +463,16 @@ export default function LeadsPage() {
           <table className="hs-table">
             <thead>
               <tr>
+                {role === 'ADMIN' && (
+                  <th className="hs-th w-10">
+                    <input
+                      ref={headerCheckboxRef}
+                      type="checkbox"
+                      checked={leads.length > 0 && selectedIds.size === leads.length}
+                      onChange={toggleAll}
+                    />
+                  </th>
+                )}
                 <th className="hs-th">Lead</th>
                 <th className="hs-th">Contact</th>
                 <th className="hs-th">Source</th>
@@ -389,12 +485,21 @@ export default function LeadsPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((lead) => {
+              {leads.map((lead) => {
                 const meta = statusMeta(lead.status)
                 const isOverdue = lead.followUpDate && new Date(lead.followUpDate) < new Date() && lead.status !== 'CONVERTED' && lead.status !== 'LOST'
                 return (
                   <React.Fragment key={lead.id}>
                   <tr className="hs-tr">
+                    {role === 'ADMIN' && (
+                      <td className="hs-td">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(lead.id)}
+                          onChange={() => toggleOne(lead.id)}
+                        />
+                      </td>
+                    )}
                     {/* Lead name + notes */}
                     <td className="hs-td">
                       <p className="font-semibold text-[#33475B] leading-tight">{lead.name}</p>
@@ -468,7 +573,7 @@ export default function LeadsPage() {
                         <span className={`flex items-center gap-1 text-xs font-medium ${isOverdue ? 'text-red-500' : 'text-[#516F90]'}`}>
                           {isOverdue && <AlertCircle className="h-3 w-3" />}
                           <Calendar className="h-3 w-3" />
-                          {format(new Date(lead.followUpDate), 'dd MMM')}
+                          {format(new Date(lead.followUpDate), 'dd MMM, h:mm a')}
                         </span>
                       ) : <span className="text-[#B0C1D4] text-xs">—</span>}
                     </td>
@@ -535,7 +640,7 @@ export default function LeadsPage() {
                   {/* Expandable activity panel */}
                   {activityLeadId === lead.id && (
                     <tr>
-                      <td colSpan={9} className="bg-[#F5F8FA] px-6 py-4 border-b border-[#DFE3EB]">
+                      <td colSpan={role === 'ADMIN' ? 10 : 9} className="bg-[#F5F8FA] px-6 py-4 border-b border-[#DFE3EB]">
                         <CommunicationTimeline
                           entityType="lead"
                           entityId={lead.id}
@@ -549,6 +654,13 @@ export default function LeadsPage() {
               })}
             </tbody>
           </table>
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            totalElements={totalElements}
+            pageSize={PAGE_SIZE}
+            onPageChange={setPage}
+          />
         </div>
       )}
 
@@ -588,6 +700,17 @@ export default function LeadsPage() {
         description={`Permanently delete "${deleteTarget?.name}"?`}
         onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
         loading={deleteMutation.isPending}
+        destructive
+      />
+
+      {/* Bulk delete confirm */}
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        title="Delete Leads"
+        description={`Are you sure you want to delete ${selectedIds.size} lead${selectedIds.size !== 1 ? 's' : ''}? This cannot be undone.`}
+        onConfirm={() => bulkDeleteMutation.mutate([...selectedIds])}
+        loading={bulkDeleteMutation.isPending}
         destructive
       />
     </div>

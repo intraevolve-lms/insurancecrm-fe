@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { toast } from 'sonner'
 import { useAuthStore } from '@/store/authStore'
 import { queryClient } from '@/lib/queryClient'
 
@@ -13,9 +14,16 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-function logoutAndRedirect() {
+// The backend gives a specific reason for a 401/403 (idle timeout, admin force-logout, etc,
+// see JwtAuthFilter / AuthService.refresh) — surface it instead of silently redirecting.
+function extractMessage(err: unknown): string | undefined {
+  return axios.isAxiosError(err) ? (err.response?.data as { message?: string } | undefined)?.message : undefined
+}
+
+function logoutAndRedirect(message?: string) {
   useAuthStore.getState().logout()
   queryClient.clear()
+  if (message) toast.warning(message)
   window.location.href = '/login'
 }
 
@@ -59,14 +67,14 @@ api.interceptors.response.use(
         originalRequest.headers = originalRequest.headers ?? {}
         originalRequest.headers.Authorization = `Bearer ${newToken}`
         return api(originalRequest)
-      } catch {
-        logoutAndRedirect()
+      } catch (refreshError) {
+        logoutAndRedirect(extractMessage(refreshError))
         return Promise.reject(error)
       }
     }
 
     if (status === 401) {
-      logoutAndRedirect()
+      logoutAndRedirect(extractMessage(error))
     }
 
     return Promise.reject(error)

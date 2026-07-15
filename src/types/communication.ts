@@ -16,7 +16,6 @@ export interface CommunicationLog {
   channel: CommunicationChannel
   outcome: CommunicationOutcome
   notes?: string
-  durationMinutes?: number
   followUpDate?: string
   loggedBy?: string
   loggedByName?: string
@@ -27,6 +26,5 @@ export interface CreateCommunicationLogRequest {
   channel: CommunicationChannel
   outcome: CommunicationOutcome
   notes?: string
-  durationMinutes?: number
   followUpDate?: string
 }

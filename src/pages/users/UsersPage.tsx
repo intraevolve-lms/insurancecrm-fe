@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as Dialog from '@radix-ui/react-dialog'
-import { Plus, X, Pencil, UserX, Users, ShieldAlert } from 'lucide-react'
+import { Plus, X, Pencil, UserX, Users, ShieldAlert, LogOut } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { usersApi } from '@/api/users'
@@ -123,6 +123,8 @@ export default function UsersPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [deactivateTarget, setDeactivateTarget] = useState<User | null>(null)
+  const [selectedAgentIds, setSelectedAgentIds] = useState<string[]>([])
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false)
 
   const isAdmin = role === 'ADMIN'
 
@@ -154,6 +156,25 @@ export default function UsersPage() {
     onError: () => toast.error('Failed to deactivate user'),
   })
 
+  const forceLogoutMutation = useMutation({
+    mutationFn: (userIds: string[]) => usersApi.forceLogout(userIds),
+    onSuccess: (_, userIds) => {
+      toast.success(`Logged out ${userIds.length} agent${userIds.length === 1 ? '' : 's'}`)
+      setLogoutConfirmOpen(false)
+      setSelectedAgentIds([])
+    },
+    onError: () => toast.error('Failed to log out selected agents'),
+  })
+
+  const agents = users.filter((u) => u.role === 'AGENT')
+  const allAgentsSelected = agents.length > 0 && selectedAgentIds.length === agents.length
+
+  const toggleAgent = (id: string) =>
+    setSelectedAgentIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+
+  const toggleAllAgents = () =>
+    setSelectedAgentIds(allAgentsSelected ? [] : agents.map((u) => u.id))
+
   if (!isAdmin) {
     return (
       <div className="p-6 flex flex-col items-center justify-center py-32 gap-4">
@@ -184,9 +205,16 @@ export default function UsersPage() {
       <PageHeader
         title="User Management"
         action={
-          <button onClick={openCreate} className="btn-primary">
-            <Plus className="h-4 w-4" /> Create User
-          </button>
+          <div className="flex items-center gap-2">
+            {selectedAgentIds.length > 0 && (
+              <button onClick={() => setLogoutConfirmOpen(true)} className="btn-secondary text-red-600">
+                <LogOut className="h-4 w-4" /> Log Out Selected ({selectedAgentIds.length})
+              </button>
+            )}
+            <button onClick={openCreate} className="btn-primary">
+              <Plus className="h-4 w-4" /> Create User
+            </button>
+          </div>
         }
       />
 
@@ -207,6 +235,15 @@ export default function UsersPage() {
           <table className="hs-table">
             <thead>
               <tr className="border-b border-[#DFE3EB] bg-[#F5F8FA]">
+                <th className="hs-th w-10">
+                  <input
+                    type="checkbox"
+                    checked={allAgentsSelected}
+                    onChange={toggleAllAgents}
+                    disabled={agents.length === 0}
+                    aria-label="Select all agents"
+                  />
+                </th>
                 {['Name', 'Email', 'Role', 'Status', 'Created', 'Actions'].map((h) => (
                   <th key={h} className="hs-th whitespace-nowrap">
                     {h}
@@ -217,6 +254,16 @@ export default function UsersPage() {
             <tbody className="divide-y divide-[#DFE3EB]">
               {users.map((u) => (
                 <tr key={u.id} className="hs-tr">
+                  <td className="hs-td">
+                    {u.role === 'AGENT' && (
+                      <input
+                        type="checkbox"
+                        checked={selectedAgentIds.includes(u.id)}
+                        onChange={() => toggleAgent(u.id)}
+                        aria-label={`Select ${u.name}`}
+                      />
+                    )}
+                  </td>
                   <td className="hs-td font-medium text-[#33475B]">{u.name}</td>
                   <td className="hs-td text-[#516F90]">{u.email}</td>
                   <td className="hs-td">
@@ -279,6 +326,17 @@ export default function UsersPage() {
         onConfirm={() => deactivateTarget && deactivateMutation.mutate(deactivateTarget.id)}
         loading={deactivateMutation.isPending}
         destructive
+      />
+
+      <ConfirmDialog
+        open={logoutConfirmOpen}
+        onOpenChange={setLogoutConfirmOpen}
+        title="Log Out Selected Agents"
+        description={`End the active session${selectedAgentIds.length === 1 ? '' : 's'} for ${selectedAgentIds.length} selected agent${selectedAgentIds.length === 1 ? '' : 's'} right now? They'll be signed out immediately and need to log in again.`}
+        onConfirm={() => forceLogoutMutation.mutate(selectedAgentIds)}
+        loading={forceLogoutMutation.isPending}
+        destructive
+        confirmLabel="Log Out"
       />
     </div>
   )

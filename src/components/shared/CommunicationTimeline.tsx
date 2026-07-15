@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as Dialog from '@radix-ui/react-dialog'
 import {
   Phone,
-  Plus, X, Trash2, Calendar, Clock, ChevronDown,
+  Plus, X, Trash2, Calendar, ChevronDown,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
@@ -34,7 +34,6 @@ const EMPTY_FORM: CreateCommunicationLogRequest = {
   channel: 'CALL',
   outcome: 'RINGING',
   notes: '',
-  durationMinutes: undefined,
   followUpDate: undefined,
 }
 
@@ -70,18 +69,10 @@ function LogActivityDialog({ open, onOpenChange, onSave, loading }: {
               </select>
             </div>
 
-            {/* Duration */}
+            {/* Follow-up date & time */}
             <div className="flex flex-col gap-1">
-              <label className="form-label">Duration (minutes)</label>
-              <input className="form-input" type="number" min={1} placeholder="e.g. 5"
-                value={form.durationMinutes ?? ''}
-                onChange={(e) => set('durationMinutes', e.target.value ? parseInt(e.target.value) : undefined)} />
-            </div>
-
-            {/* Follow-up date */}
-            <div className="flex flex-col gap-1">
-              <label className="form-label">Next Follow-up Date</label>
-              <input className="form-input" type="date" value={form.followUpDate ?? ''}
+              <label className="form-label">Next Follow-up Date &amp; Time</label>
+              <input className="form-input" type="datetime-local" value={form.followUpDate ?? ''}
                 onChange={(e) => set('followUpDate', e.target.value || undefined)} />
             </div>
 
@@ -203,14 +194,9 @@ export function CommunicationTimeline({ entityType, entityId, queryKey }: Props)
                         <div className="flex flex-wrap items-center gap-2 mb-1">
                           <span className={`text-xs font-semibold ${ch.color}`}>{ch.label}</span>
                           <span className={`hs-badge border ${out.bg} ${out.color}`}>{out.label}</span>
-                          {log.durationMinutes && (
-                            <span className="flex items-center gap-1 text-[11px] text-[#516F90]">
-                              <Clock className="h-3 w-3" /> {log.durationMinutes}m
-                            </span>
-                          )}
                           {log.followUpDate && (
                             <span className="flex items-center gap-1 text-[11px] text-[#516F90]">
-                              <Calendar className="h-3 w-3" /> Follow-up {format(new Date(log.followUpDate), 'dd MMM')}
+                              <Calendar className="h-3 w-3" /> Follow-up {format(new Date(log.followUpDate), 'dd MMM, h:mm a')}
                             </span>
                           )}
                         </div>

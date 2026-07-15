@@ -1,10 +1,21 @@
 import api from '@/lib/axios'
-import type { ApiResponse } from '@/types/api'
+import type { ApiResponse, BulkDeleteResult, PagedResponse } from '@/types/api'
 import type { Customer, CreateCustomerRequest, BulkAssignResult } from '@/types/customer'
+import type { CommunicationOutcome } from '@/types/communication'
+
+export interface CustomerListParams {
+  page?: number
+  size?: number
+  sortBy?: 'premium' | 'expiryDate'
+  sortDir?: 'asc' | 'desc'
+  outcome?: CommunicationOutcome
+}
 
 export const customersApi = {
-  getAll: () => api.get<ApiResponse<Customer[]>>('/customers').then((r) => r.data),
-  search: (q: string) => api.get<ApiResponse<Customer[]>>(`/customers/search?q=${q}`).then((r) => r.data),
+  getAll: (params: CustomerListParams = {}) =>
+    api.get<ApiResponse<PagedResponse<Customer>>>('/customers', { params }).then((r) => r.data),
+  search: (q: string, params: CustomerListParams = {}) =>
+    api.get<ApiResponse<PagedResponse<Customer>>>('/customers/search', { params: { q, ...params } }).then((r) => r.data),
   getById: (id: string) => api.get<ApiResponse<Customer>>(`/customers/${id}`).then((r) => r.data),
   create: (data: CreateCustomerRequest) =>
     api.post<ApiResponse<Customer>>('/customers', data).then((r) => r.data),
@@ -15,4 +26,6 @@ export const customersApi = {
   bulkAssignAgent: (customerIds: string[], agentId: string) =>
     api.patch<ApiResponse<BulkAssignResult>>('/customers/bulk-assign', { customerIds, agentId }).then((r) => r.data),
   delete: (id: string) => api.delete<ApiResponse<void>>(`/customers/${id}`).then((r) => r.data),
+  bulkDelete: (ids: string[]) =>
+    api.delete<ApiResponse<BulkDeleteResult>>('/customers/bulk-delete', { data: { ids } }).then((r) => r.data),
 }

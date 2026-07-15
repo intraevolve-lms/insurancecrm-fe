@@ -115,14 +115,16 @@ export function Sidebar({ onClose }: Props) {
             {role}
           </span>
         </div>
-        <NavLink
-          to="/change-password"
-          onClick={handleNavClick}
-          className="w-full flex items-center gap-2.5 rounded px-3 py-2 text-[13px] font-medium text-white/50 hover:bg-white/10 hover:text-white transition-colors duration-100"
-        >
-          <KeyRound className="h-4 w-4" />
-          Change password
-        </NavLink>
+        {role === 'ADMIN' && (
+          <NavLink
+            to="/change-password"
+            onClick={handleNavClick}
+            className="w-full flex items-center gap-2.5 rounded px-3 py-2 text-[13px] font-medium text-white/50 hover:bg-white/10 hover:text-white transition-colors duration-100"
+          >
+            <KeyRound className="h-4 w-4" />
+            Change password
+          </NavLink>
+        )}
         <button
           onClick={handleLogout}
           className="w-full flex items-center gap-2.5 rounded px-3 py-2 text-[13px] font-medium text-white/50 hover:bg-white/10 hover:text-white transition-colors duration-100"
