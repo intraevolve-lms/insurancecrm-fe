@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useAuthStore } from '@/store/authStore'
@@ -154,6 +154,24 @@ describe('CommunicationTimeline — log activity dialog', () => {
       channel: 'CALL', outcome: 'CALLBACK', notes: 'Follow up next week',
     })))
     expect(communicationsApi.logForCustomer).not.toHaveBeenCalled()
+  })
+
+  it('the outcome dropdown includes Language Issue, and selecting it saves that outcome', async () => {
+    const user = userEvent.setup()
+    renderTimeline('lead')
+
+    await waitFor(() => expect(screen.getByText('Ringing')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: /log activity/i }))
+
+    const select = screen.getByRole('combobox')
+    expect(within(select).getByRole('option', { name: 'Language Issue' })).toBeInTheDocument()
+
+    await user.selectOptions(select, 'LANGUAGE_ISSUE')
+    await user.click(screen.getByRole('button', { name: /^save$/i }))
+
+    await waitFor(() => expect(communicationsApi.logForLead).toHaveBeenCalledWith('l1', expect.objectContaining({
+      outcome: 'LANGUAGE_ISSUE',
+    })))
   })
 
   it('saving for a customer calls logForCustomer, not logForLead', async () => {

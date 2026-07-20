@@ -8,6 +8,7 @@ export type CommunicationOutcome =
   | 'HANG_UP'
   | 'NEXT_YEAR'
   | 'SALE_CLOSE'
+  | 'LANGUAGE_ISSUE'
 
 export interface CommunicationLog {
   id: string
