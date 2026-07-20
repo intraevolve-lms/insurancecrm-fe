@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   Users, AlertTriangle,
   XCircle, RefreshCw, TrendingUp, Bell, MessageSquare,
-  PhoneForwarded, PhoneIncoming, UserPlus, PhoneCall, PhoneOff, PhoneMissed, CalendarClock,
+  PhoneForwarded, PhoneIncoming, UserPlus, PhoneCall, PhoneOff, PhoneMissed, CalendarClock, Languages,
 } from 'lucide-react'
 import { dashboardApi } from '@/api/dashboard'
 import { remindersApi } from '@/api/reminders'
@@ -22,11 +22,12 @@ const OUTCOME_STAT_ICONS: Record<CommunicationOutcome, React.ElementType> = {
   HANG_UP:     PhoneMissed,
   NEXT_YEAR:   CalendarClock,
   SALE_CLOSE:  PhoneCall,
+  LANGUAGE_ISSUE: Languages,
 }
 
 // Dashboard funnel excludes SALE_CLOSE — once closed, the lead is converted to a customer
 const DASHBOARD_OUTCOMES: CommunicationOutcome[] = [
-  'MY_CALLBACK', 'CALLBACK', 'PROSPECT', 'RINGING', 'SWITCH_OFF', 'HANG_UP', 'NEXT_YEAR',
+  'MY_CALLBACK', 'CALLBACK', 'PROSPECT', 'RINGING', 'SWITCH_OFF', 'HANG_UP', 'NEXT_YEAR', 'LANGUAGE_ISSUE',
 ]
 
 const REMINDER_ICONS: Record<ReminderType, React.ElementType> = {
@@ -67,6 +68,7 @@ const OUTCOME_STAT_COLORS: Record<CommunicationOutcome, { bg: string; color: str
   HANG_UP:     { bg: 'bg-orange-50',  color: 'text-orange-600' },
   NEXT_YEAR:   { bg: 'bg-purple-50',  color: 'text-purple-600' },
   SALE_CLOSE:  { bg: 'bg-emerald-50', color: 'text-emerald-600' },
+  LANGUAGE_ISSUE: { bg: 'bg-pink-50', color: 'text-pink-600' },
 }
 
 // Overview is customer-scoped only — lead call-outcome stats live on the Leads page itself.
