@@ -253,7 +253,7 @@ describe('UsersPage — create / edit / deactivate', () => {
 
   it('an already-inactive user has no Deactivate button', async () => {
     vi.mocked(usersApi.getAll).mockResolvedValueOnce({
-      success: true, message: 'ok',
+      success: true, message: 'ok', timestamp: '2026-01-01T00:00:00',
       data: [...users, { id: 'agent-3', name: 'Dave Inactive', email: 'dave@test.com', role: 'AGENT', active: false, createdAt: '2026-01-01T00:00:00' }],
     })
     renderUsersPage()

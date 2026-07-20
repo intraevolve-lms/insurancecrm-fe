@@ -46,7 +46,7 @@ describe('CommunicationTimeline — rendering', () => {
   })
 
   it('renders the empty state when there are no logs', async () => {
-    vi.mocked(communicationsApi.getByLead).mockResolvedValueOnce({ success: true, message: 'ok', data: [] })
+    vi.mocked(communicationsApi.getByLead).mockResolvedValueOnce({ success: true, message: 'ok', data: [], timestamp: '2026-01-01T00:00:00' })
     renderTimeline()
 
     await waitFor(() => expect(screen.getByText(/no activity logged yet/i)).toBeInTheDocument())
@@ -131,7 +131,7 @@ describe('CommunicationTimeline — log activity dialog', () => {
 
   it('opens from the header button and from the empty-state button', async () => {
     const user = userEvent.setup()
-    vi.mocked(communicationsApi.getByLead).mockResolvedValueOnce({ success: true, message: 'ok', data: [] })
+    vi.mocked(communicationsApi.getByLead).mockResolvedValueOnce({ success: true, message: 'ok', data: [], timestamp: '2026-01-01T00:00:00' })
     renderTimeline()
 
     await waitFor(() => expect(screen.getByText(/no activity logged yet/i)).toBeInTheDocument())
