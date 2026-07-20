@@ -9,5 +9,6 @@ export interface AgentPerformance {
   switchOff: number
   hangUp: number
   nextYear: number
+  languageIssue: number
   lastActivityAt?: string
 }
