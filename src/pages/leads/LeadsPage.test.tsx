@@ -33,7 +33,7 @@ const CLOSED_STATUSES = ['CONVERTED', 'LOST']
 function computeSummary() {
   const statusCounts: Record<string, number> = { NEW: 0, CONTACTED: 0, QUOTE_SENT: 0, NEGOTIATING: 0, CONVERTED: 0, LOST: 0 }
   const outcomeCounts: Record<string, number> = {
-    MY_CALLBACK: 0, CALLBACK: 0, PROSPECT: 0, RINGING: 0, SWITCH_OFF: 0, HANG_UP: 0, NEXT_YEAR: 0, SALE_CLOSE: 0,
+    MY_CALLBACK: 0, CALLBACK: 0, PROSPECT: 0, RINGING: 0, SWITCH_OFF: 0, HANG_UP: 0, NEXT_YEAR: 0, SALE_CLOSE: 0, LANGUAGE_ISSUE: 0,
   }
   for (const l of leads) {
     statusCounts[l.status] = (statusCounts[l.status] ?? 0) + 1
