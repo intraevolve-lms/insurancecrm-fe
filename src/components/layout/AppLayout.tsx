@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { Header } from './Header'
 import { IdleLogoutGuard } from '@/components/shared/IdleLogoutGuard'
+import { DataProtectionGuard } from '@/components/shared/DataProtectionGuard'
 
 export function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -10,6 +11,7 @@ export function AppLayout() {
   return (
     <div className="flex h-screen overflow-hidden bg-[#F5F8FA]">
       <IdleLogoutGuard />
+      <DataProtectionGuard />
 
       {/* Mobile backdrop */}
       {sidebarOpen && (

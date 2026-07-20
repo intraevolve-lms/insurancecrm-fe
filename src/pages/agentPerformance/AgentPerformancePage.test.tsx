@@ -7,12 +7,12 @@ import AgentPerformancePage from './AgentPerformancePage'
 const performance: AgentPerformance[] = [
   {
     agentId: 'a1', agentName: 'Agent One', totalCustomers: 10,
-    myCallback: 0, callback: 2, prospect: 1, ringing: 3, switchOff: 0, hangUp: 0, nextYear: 0,
+    myCallback: 0, callback: 2, prospect: 1, ringing: 3, switchOff: 0, hangUp: 0, nextYear: 0, languageIssue: 5,
     lastActivityAt: '2026-01-05T10:00:00',
   },
   {
     agentId: 'a2', agentName: 'Agent Two', totalCustomers: 4,
-    myCallback: 1, callback: 0, prospect: 0, ringing: 0, switchOff: 0, hangUp: 0, nextYear: 0,
+    myCallback: 1, callback: 0, prospect: 0, ringing: 0, switchOff: 0, hangUp: 0, nextYear: 0, languageIssue: 0,
   },
 ]
 
@@ -38,10 +38,13 @@ describe('AgentPerformancePage', () => {
     await waitFor(() => expect(screen.getByText('Agent One')).toBeInTheDocument())
     expect(screen.getByText('Agent Two')).toBeInTheDocument()
 
+    expect(screen.getByRole('columnheader', { name: 'Language Issue' })).toBeInTheDocument()
+
     const row1 = screen.getByText('Agent One').closest('tr')!
     expect(row1).toHaveTextContent('10') // totalCustomers
     expect(row1).toHaveTextContent('3')  // ringing
     expect(row1).toHaveTextContent('2')  // callback
+    expect(row1).toHaveTextContent('5')  // languageIssue
 
     const row2 = screen.getByText('Agent Two').closest('tr')!
     expect(row2).toHaveTextContent('4') // totalCustomers

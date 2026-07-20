@@ -40,7 +40,7 @@ const POLICY_TYPES: PolicyType[] = ['MOTOR','HEALTH','LIFE','TRAVEL','OTHER']
 
 // Excludes SALE_CLOSE — once closed, the lead is converted to a customer
 const LEAD_OUTCOMES: CommunicationOutcome[] = [
-  'MY_CALLBACK', 'CALLBACK', 'PROSPECT', 'RINGING', 'SWITCH_OFF', 'HANG_UP', 'NEXT_YEAR',
+  'MY_CALLBACK', 'CALLBACK', 'PROSPECT', 'RINGING', 'SWITCH_OFF', 'HANG_UP', 'NEXT_YEAR', 'LANGUAGE_ISSUE',
 ]
 
 const EMPTY_FORM: CreateLeadRequest = {
@@ -74,7 +74,7 @@ function LeadFormDialog({ open, onOpenChange, initial, onSave, loading, agents }
     setForm((f) => ({ ...f, [k]: v }))
 
   // Reset form when dialog opens with new initial value
-  useState(() => { if (open) resetForm(initial) })
+  useEffect(() => { if (open) resetForm(initial) }, [open, initial])
 
   return (
     <Dialog.Root open={open} onOpenChange={(v) => { if (!v) resetForm(); onOpenChange(v) }}>
@@ -396,7 +396,7 @@ export default function LeadsPage() {
       </div>
 
       {/* Outcome funnel summary bar */}
-      <div className="grid grid-cols-3 md:grid-cols-7 gap-3 mb-5">
+      <div className="grid grid-cols-3 md:grid-cols-8 gap-3 mb-5">
         {LEAD_OUTCOMES.map((o) => (
           <button
             key={o}

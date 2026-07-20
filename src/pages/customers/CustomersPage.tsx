@@ -365,25 +365,23 @@ export default function CustomersPage() {
                 <th className="hs-th">Email</th>
                 <th className="hs-th">Assigned To</th>
                 {role === 'ADMIN' && (
-                  <>
-                    <th className="hs-th">
-                      <button onClick={() => toggleSort('premium')} className="flex items-center gap-1 hover:text-[#0091AE] transition">
-                        Premium
-                        {sortField === 'premium'
-                          ? (sortDir === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)
-                          : <ArrowUpDown className="h-3 w-3 opacity-40" />}
-                      </button>
-                    </th>
-                    <th className="hs-th">
-                      <button onClick={() => toggleSort('expiryDate')} className="flex items-center gap-1 hover:text-[#0091AE] transition">
-                        Expiry Date
-                        {sortField === 'expiryDate'
-                          ? (sortDir === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)
-                          : <ArrowUpDown className="h-3 w-3 opacity-40" />}
-                      </button>
-                    </th>
-                  </>
+                  <th className="hs-th">
+                    <button onClick={() => toggleSort('premium')} className="flex items-center gap-1 hover:text-[#0091AE] transition">
+                      Premium
+                      {sortField === 'premium'
+                        ? (sortDir === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)
+                        : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                    </button>
+                  </th>
                 )}
+                <th className="hs-th">
+                  <button onClick={() => toggleSort('expiryDate')} className="flex items-center gap-1 hover:text-[#0091AE] transition">
+                    Expiry Date
+                    {sortField === 'expiryDate'
+                      ? (sortDir === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)
+                      : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                  </button>
+                </th>
                 <th className="hs-th">Created</th>
                 <th className="hs-th">Actions</th>
               </tr>
@@ -448,15 +446,13 @@ export default function CustomersPage() {
                   </td>
 
                   {role === 'ADMIN' && (
-                    <>
-                      <td className="hs-td text-[#33475B] font-medium whitespace-nowrap">
-                        {c.lastYearPremium != null ? `₹${c.lastYearPremium.toLocaleString('en-IN')}` : '—'}
-                      </td>
-                      <td className="hs-td text-[#516F90] whitespace-nowrap">
-                        {c.expiryDate ? format(new Date(c.expiryDate), 'dd MMM yyyy') : '—'}
-                      </td>
-                    </>
+                    <td className="hs-td text-[#33475B] font-medium whitespace-nowrap">
+                      {c.lastYearPremium != null ? `₹${c.lastYearPremium.toLocaleString('en-IN')}` : '—'}
+                    </td>
                   )}
+                  <td className="hs-td text-[#516F90] whitespace-nowrap">
+                    {c.expiryDate ? format(new Date(c.expiryDate), 'dd MMM yyyy') : '—'}
+                  </td>
 
                   <td className="hs-td text-[#516F90] whitespace-nowrap">
                     {format(new Date(c.createdAt), 'dd MMM yyyy')}

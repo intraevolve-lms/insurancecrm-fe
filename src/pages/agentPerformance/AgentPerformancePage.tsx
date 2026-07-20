@@ -10,7 +10,7 @@ import type { AgentPerformance } from '@/types/agentPerformance'
 import type { CommunicationOutcome } from '@/types/communication'
 
 const OUTCOME_COLUMNS: CommunicationOutcome[] = [
-  'MY_CALLBACK', 'CALLBACK', 'PROSPECT', 'RINGING', 'SWITCH_OFF', 'HANG_UP', 'NEXT_YEAR',
+  'MY_CALLBACK', 'CALLBACK', 'PROSPECT', 'RINGING', 'SWITCH_OFF', 'HANG_UP', 'NEXT_YEAR', 'LANGUAGE_ISSUE',
 ]
 
 const OUTCOME_FIELD: Partial<Record<CommunicationOutcome, keyof AgentPerformance>> = {
@@ -21,6 +21,7 @@ const OUTCOME_FIELD: Partial<Record<CommunicationOutcome, keyof AgentPerformance
   SWITCH_OFF: 'switchOff',
   HANG_UP: 'hangUp',
   NEXT_YEAR: 'nextYear',
+  LANGUAGE_ISSUE: 'languageIssue',
 }
 
 export default function AgentPerformancePage() {
