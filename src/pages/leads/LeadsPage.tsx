@@ -74,7 +74,7 @@ function LeadFormDialog({ open, onOpenChange, initial, onSave, loading, agents }
     setForm((f) => ({ ...f, [k]: v }))
 
   // Reset form when dialog opens with new initial value
-  useState(() => { if (open) resetForm(initial) })
+  useEffect(() => { if (open) resetForm(initial) }, [open, initial])
 
   return (
     <Dialog.Root open={open} onOpenChange={(v) => { if (!v) resetForm(); onOpenChange(v) }}>
