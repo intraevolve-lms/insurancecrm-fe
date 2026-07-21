@@ -53,7 +53,7 @@ export default function AgentPerformancePage() {
         <EmptyState
           icon={<Award className="h-6 w-6" />}
           title="No agent activity yet"
-          description="Stats appear once agents start logging activity on leads"
+          description="Stats appear once agents start logging activity on customers"
         />
       ) : (
         <div className="hs-table-wrap">

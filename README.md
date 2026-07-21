@@ -1,6 +1,6 @@
 # InsuredIndex — Frontend
 
-React 19 / TypeScript / Vite frontend for the InsuredIndex (insuredindex.inurek.com) backend ([insurancecrm](https://github.com/intraevolve-lms/insurancecrm)). Customer & lead management, communication logging, agent performance, and a renewal-focused dashboard.
+React 19 / TypeScript / Vite frontend for the InsuredIndex (insuredindex.inurek.com) backend ([insurancecrm](https://github.com/intraevolve-lms/insurancecrm)). Customer management, communication logging, agent performance, and a renewal-focused dashboard.
 
 ## Prerequisites
 

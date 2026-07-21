@@ -171,7 +171,6 @@ export default function NewCustomersPage() {
                     <tr>
                       <td colSpan={role === 'ADMIN' ? 8 : 6} className="bg-[#F5F8FA] px-6 py-4 border-b border-[#DFE3EB]">
                         <CommunicationTimeline
-                          entityType="customer"
                           entityId={c.id}
                           queryKey={['customer-comms', c.id]}
                         />

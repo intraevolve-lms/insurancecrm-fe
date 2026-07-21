@@ -104,12 +104,11 @@ function LogActivityDialog({ open, onOpenChange, onSave, loading }: {
 // ── Timeline ───────────────────────────────────────────────────────────────
 
 interface Props {
-  entityType: 'customer' | 'lead'
   entityId: string
   queryKey: string[]
 }
 
-export function CommunicationTimeline({ entityType, entityId, queryKey }: Props) {
+export function CommunicationTimeline({ entityId, queryKey }: Props) {
   const { role, userId } = useAuthStore()
   const qc = useQueryClient()
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -117,40 +116,28 @@ export function CommunicationTimeline({ entityType, entityId, queryKey }: Props)
 
   const { data, isLoading } = useQuery({
     queryKey,
-    queryFn: () =>
-      entityType === 'customer'
-        ? communicationsApi.getByCustomer(entityId)
-        : communicationsApi.getByLead(entityId),
+    queryFn: () => communicationsApi.getByCustomer(entityId),
   })
 
   const logs = data?.data ?? []
-  // Logging/deleting an activity updates the entity's lastOutcome server-side (see
-  // CommunicationLogService), which feeds the Dashboard tiles, the Leads funnel, and the
-  // Agent Performance breakdown — all of those need to refetch too, not just this timeline,
-  // or they'd keep showing stale counts until the query's staleTime lapses and the page is
-  // revisited.
+  // Logging/deleting an activity updates the customer's lastOutcome server-side (see
+  // CommunicationLogService), which feeds the Dashboard tiles, the New Customers queue, and the
+  // Agent Performance breakdown — all of those need to refetch too, not just this timeline, or
+  // they'd keep showing stale counts until the query's staleTime lapses and the page is revisited.
   const invalidate = () => {
     qc.invalidateQueries({ queryKey })
     qc.invalidateQueries({ queryKey: ['agent-performance'] })
-    if (entityType === 'customer') {
-      qc.invalidateQueries({ queryKey: ['dashboard'] })
-      qc.invalidateQueries({ queryKey: ['customers'] })
-      // The New Customers queue and its sidebar badge count both key off lastOutcome=null —
-      // logging an activity sets it, moving the customer out of that list. (Deleting a log does
-      // NOT clear lastOutcome server-side, so this invalidation is a no-op for delete today, but
-      // harmless to include — keeps this in sync if that ever changes.)
-      qc.invalidateQueries({ queryKey: ['customers-new'] })
-    } else {
-      qc.invalidateQueries({ queryKey: ['leads-summary'] })
-      qc.invalidateQueries({ queryKey: ['leads'] })
-    }
+    qc.invalidateQueries({ queryKey: ['dashboard'] })
+    qc.invalidateQueries({ queryKey: ['customers'] })
+    // The New Customers queue and its sidebar badge count both key off lastOutcome=null —
+    // logging an activity sets it, moving the customer out of that list. (Deleting a log does
+    // NOT clear lastOutcome server-side, so this invalidation is a no-op for delete today, but
+    // harmless to include — keeps this in sync if that ever changes.)
+    qc.invalidateQueries({ queryKey: ['customers-new'] })
   }
 
   const logMutation = useMutation({
-    mutationFn: (d: CreateCommunicationLogRequest) =>
-      entityType === 'customer'
-        ? communicationsApi.logForCustomer(entityId, d)
-        : communicationsApi.logForLead(entityId, d),
+    mutationFn: (d: CreateCommunicationLogRequest) => communicationsApi.logForCustomer(entityId, d),
     onSuccess: () => { toast.success('Activity logged'); setDialogOpen(false); invalidate() },
     onError: () => toast.error('Failed to log activity'),
   })

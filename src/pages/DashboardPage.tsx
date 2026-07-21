@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
   Users, AlertTriangle,
-  XCircle, RefreshCw, TrendingUp, Bell, MessageSquare,
+  XCircle, RefreshCw, Bell, MessageSquare,
   PhoneForwarded, PhoneIncoming, UserPlus, PhoneCall, PhoneOff, PhoneMissed, CalendarClock, Languages, ThumbsDown,
 } from 'lucide-react'
 import { dashboardApi } from '@/api/dashboard'
@@ -26,22 +26,19 @@ const OUTCOME_STAT_ICONS: Record<CommunicationOutcome, React.ElementType> = {
   NOT_INTERESTED: ThumbsDown,
 }
 
-// Dashboard funnel excludes SALE_CLOSE — once closed, the lead is converted to a customer
+// Dashboard funnel excludes SALE_CLOSE — once closed, the customer's policy is treated as sold
 const DASHBOARD_OUTCOMES: CommunicationOutcome[] = [
   'MY_CALLBACK', 'CALLBACK', 'PROSPECT', 'RINGING', 'SWITCH_OFF', 'HANG_UP', 'NEXT_YEAR', 'LANGUAGE_ISSUE',
 ]
 
 const REMINDER_ICONS: Record<ReminderType, React.ElementType> = {
-  LEAD_FOLLOWUP: TrendingUp, COMMUNICATION_FOLLOWUP: MessageSquare,
+  COMMUNICATION_FOLLOWUP: MessageSquare,
 }
 
 function DashboardReminderRow({ r, navigate }: { r: import('@/types/reminder').Reminder; navigate: (path: string) => void }) {
   const Icon = REMINDER_ICONS[r.type]
   const handleClick = () => {
-    // entityKind (not type) decides the destination — a COMMUNICATION_FOLLOWUP reminder can be
-    // logged against either a customer or a lead, and leads have no dedicated detail route.
-    if (r.entityKind === 'LEAD') navigate('/leads')
-    else if (r.entityId) navigate(`/customers/${r.entityId}`)
+    if (r.entityId) navigate(`/customers/${r.entityId}`)
   }
   return (
     <button
@@ -73,7 +70,6 @@ const OUTCOME_STAT_COLORS: Record<CommunicationOutcome, { bg: string; color: str
   NOT_INTERESTED: { bg: 'bg-red-50', color: 'text-red-600' },
 }
 
-// Overview is customer-scoped only — lead call-outcome stats live on the Leads page itself.
 function buildStats(summary: DashboardSummary) {
   const outcomeStats = DASHBOARD_OUTCOMES.map((outcome) => ({
     value: summary.outcomeCounts[outcome] ?? 0,

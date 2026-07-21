@@ -132,7 +132,6 @@ export default function CustomerDetailPage() {
       {/* Activity */}
       <div className="hs-card p-6">
         <CommunicationTimeline
-          entityType="customer"
           entityId={id!}
           queryKey={['customer-comms', id!]}
         />

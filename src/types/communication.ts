@@ -14,7 +14,6 @@ export type CommunicationOutcome =
 export interface CommunicationLog {
   id: string
   customerId?: string
-  leadId?: string
   channel: CommunicationChannel
   outcome: CommunicationOutcome
   notes?: string

@@ -9,12 +9,6 @@ export const communicationsApi = {
   logForCustomer: (customerId: string, data: CreateCommunicationLogRequest) =>
     api.post<ApiResponse<CommunicationLog>>(`/customers/${customerId}/communications`, data).then((r) => r.data),
 
-  getByLead: (leadId: string) =>
-    api.get<ApiResponse<CommunicationLog[]>>(`/leads/${leadId}/communications`).then((r) => r.data),
-
-  logForLead: (leadId: string, data: CreateCommunicationLogRequest) =>
-    api.post<ApiResponse<CommunicationLog>>(`/leads/${leadId}/communications`, data).then((r) => r.data),
-
   delete: (id: string) =>
     api.delete<ApiResponse<void>>(`/communications/${id}`).then((r) => r.data),
 }

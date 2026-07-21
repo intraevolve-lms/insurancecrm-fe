@@ -42,13 +42,6 @@ describe('DashboardPage (Overview) — customer-only scope', () => {
     expect(screen.getByText('1')).toBeInTheDocument() // Callback count
   })
 
-  it('does not show a "New Leads" tile — lead stats live on the Leads page now', async () => {
-    renderDashboard()
-
-    await waitFor(() => expect(screen.getByText('Total Customers')).toBeInTheDocument())
-    expect(screen.queryByText('New Leads')).not.toBeInTheDocument()
-  })
-
   it('an outcome with zero count still renders as 0, not blank/undefined', async () => {
     renderDashboard()
 

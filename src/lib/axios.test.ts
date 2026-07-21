@@ -151,14 +151,14 @@ describe('axios interceptors', () => {
     setLoggedIn('expired-token', 'good-refresh-token')
 
     mock.onGet('/customers').replyOnce(401)
-    mock.onGet('/leads').replyOnce(401)
+    mock.onGet('/agent-performance').replyOnce(401)
     mock.onPost('/auth/refresh').replyOnce(200, {
       data: { token: 'new-token', refreshToken: 'new-refresh' },
     })
     mock.onGet('/customers').replyOnce(200, { data: [] })
-    mock.onGet('/leads').replyOnce(200, { data: [] })
+    mock.onGet('/agent-performance').replyOnce(200, { data: [] })
 
-    await Promise.all([api.get('/customers'), api.get('/leads')])
+    await Promise.all([api.get('/customers'), api.get('/agent-performance')])
 
     expect(mock.history.post.filter((r) => r.url === '/auth/refresh')).toHaveLength(1)
   })
