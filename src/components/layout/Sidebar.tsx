@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
-  LayoutDashboard, Users, Award,
+  LayoutDashboard, Award,
   UserCog, LogOut, X, KeyRound,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
@@ -9,7 +9,6 @@ import logoIcon from '@/assets/logo-icon.png'
 
 const navItems = [
   { to: '/dashboard',        label: 'Dashboard',        Icon: LayoutDashboard },
-  { to: '/customers',        label: 'Customers',        Icon: Users },
   { to: '/agent-performance', label: 'Agent Performance', Icon: Award },
 ]
 

@@ -47,4 +47,13 @@ describe('Sidebar — nav items', () => {
 
     expect(screen.queryByRole('link', { name: /new customers/i })).not.toBeInTheDocument()
   })
+
+  it('does not show a standalone Customers nav link — the full list is reachable via the Dashboard\'s Total Customers tile', () => {
+    useAuthStore.getState().login({
+      token: 't', refreshToken: 'rt', userId: 'agent-1', name: 'Agent One', email: 'agent@test.com', role: 'AGENT',
+    })
+    renderSidebar()
+
+    expect(screen.queryByRole('link', { name: /^customers$/i })).not.toBeInTheDocument()
+  })
 })
