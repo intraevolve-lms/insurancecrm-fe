@@ -134,6 +134,11 @@ export function CommunicationTimeline({ entityType, entityId, queryKey }: Props)
     if (entityType === 'customer') {
       qc.invalidateQueries({ queryKey: ['dashboard'] })
       qc.invalidateQueries({ queryKey: ['customers'] })
+      // The New Customers queue and its sidebar badge count both key off lastOutcome=null —
+      // logging an activity sets it, moving the customer out of that list. (Deleting a log does
+      // NOT clear lastOutcome server-side, so this invalidation is a no-op for delete today, but
+      // harmless to include — keeps this in sync if that ever changes.)
+      qc.invalidateQueries({ queryKey: ['customers-new'] })
     } else {
       qc.invalidateQueries({ queryKey: ['leads-summary'] })
       qc.invalidateQueries({ queryKey: ['leads'] })

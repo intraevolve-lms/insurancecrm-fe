@@ -11,9 +11,19 @@ export interface CustomerListParams {
   outcome?: CommunicationOutcome
 }
 
+export interface NewCustomersParams {
+  page?: number
+  size?: number
+  q?: string
+  sortBy?: 'premium' | 'expiryDate'
+  sortDir?: 'asc' | 'desc'
+}
+
 export const customersApi = {
   getAll: (params: CustomerListParams = {}) =>
     api.get<ApiResponse<PagedResponse<Customer>>>('/customers', { params }).then((r) => r.data),
+  getNew: (params: NewCustomersParams = {}) =>
+    api.get<ApiResponse<PagedResponse<Customer>>>('/customers/new', { params }).then((r) => r.data),
   search: (q: string, params: CustomerListParams = {}) =>
     api.get<ApiResponse<PagedResponse<Customer>>>('/customers/search', { params: { q, ...params } }).then((r) => r.data),
   getById: (id: string) => api.get<ApiResponse<Customer>>(`/customers/${id}`).then((r) => r.data),
