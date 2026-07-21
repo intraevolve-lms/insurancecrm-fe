@@ -1,5 +1,5 @@
-export type ReminderType = 'LEAD_FOLLOWUP' | 'COMMUNICATION_FOLLOWUP'
-export type ReminderEntityKind = 'CUSTOMER' | 'LEAD'
+export type ReminderType = 'COMMUNICATION_FOLLOWUP'
+export type ReminderEntityKind = 'CUSTOMER'
 
 export interface Reminder {
   id: string
