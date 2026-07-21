@@ -139,6 +139,7 @@ describe('CommunicationTimeline — cache invalidation on log/delete', () => {
 
     await waitFor(() => expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['dashboard'] }))
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['customers'] })
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['customers-new'] })
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['agent-performance'] })
     expect(invalidateSpy).not.toHaveBeenCalledWith({ queryKey: ['leads-summary'] })
     expect(invalidateSpy).not.toHaveBeenCalledWith({ queryKey: ['leads'] })
@@ -158,6 +159,7 @@ describe('CommunicationTimeline — cache invalidation on log/delete', () => {
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['agent-performance'] })
     expect(invalidateSpy).not.toHaveBeenCalledWith({ queryKey: ['dashboard'] })
     expect(invalidateSpy).not.toHaveBeenCalledWith({ queryKey: ['customers'] })
+    expect(invalidateSpy).not.toHaveBeenCalledWith({ queryKey: ['customers-new'] })
   })
 
   it('deleting a log also triggers the same cross-page invalidation', async () => {
