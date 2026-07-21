@@ -9,7 +9,6 @@ import CustomersPage from '@/pages/customers/CustomersPage'
 import NewCustomersPage from '@/pages/customers/NewCustomersPage'
 import CustomerDetailPage from '@/pages/customers/CustomerDetailPage'
 import AgentPerformancePage from '@/pages/agentPerformance/AgentPerformancePage'
-import LeadsPage from '@/pages/leads/LeadsPage'
 import UsersPage from '@/pages/users/UsersPage'
 
 // Blocks access to the rest of the app until a forced password change (set on freshly-seeded
@@ -35,7 +34,6 @@ export default function App() {
               <Route path="/new-customers" element={<NewCustomersPage />} />
               <Route path="/customers/:id" element={<CustomerDetailPage />} />
               <Route path="/agent-performance" element={<AgentPerformancePage />} />
-              <Route path="/leads" element={<LeadsPage />} />
               <Route path="/users" element={<UsersPage />} />
             </Route>
           </Route>

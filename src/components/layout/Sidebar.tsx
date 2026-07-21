@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
   LayoutDashboard, Users, Award,
-  UserCog, LogOut, X, TrendingUp, KeyRound, UserPlus,
+  UserCog, LogOut, X, KeyRound, UserPlus,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { queryClient } from '@/lib/queryClient'
@@ -11,7 +11,6 @@ import logoIcon from '@/assets/logo-icon.png'
 
 const navItems = [
   { to: '/dashboard',        label: 'Dashboard',        Icon: LayoutDashboard },
-  { to: '/leads',            label: 'Leads',            Icon: TrendingUp },
   { to: '/customers',        label: 'Customers',        Icon: Users },
   { to: '/new-customers',    label: 'New Customers',    Icon: UserPlus },
   { to: '/agent-performance', label: 'Agent Performance', Icon: Award },

@@ -1,14 +1,13 @@
 import { useState, useRef, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Bell, HelpCircle, Menu, CheckSquare, TrendingUp, MessageSquare, AlertCircle, X } from 'lucide-react'
+import { Bell, HelpCircle, Menu, CheckSquare, MessageSquare, AlertCircle, X } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { remindersApi } from '@/api/reminders'
 import type { Reminder, ReminderType } from '@/types/reminder'
 
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'Dashboard',
-  '/leads':     'Leads',
   '/customers': 'Customers',
   '/new-customers': 'New Customers',
   '/agent-performance': 'Agent Performance',
@@ -16,8 +15,7 @@ const PAGE_TITLES: Record<string, string> = {
 }
 
 const TYPE_META: Record<ReminderType, { icon: React.ElementType; color: string; label: string }> = {
-  LEAD_FOLLOWUP:          { icon: TrendingUp,    color: 'text-blue-500',  label: 'Lead' },
-  COMMUNICATION_FOLLOWUP: { icon: MessageSquare, color: 'text-purple-500',label: 'Follow-up' },
+  COMMUNICATION_FOLLOWUP: { icon: MessageSquare, color: 'text-purple-500', label: 'Follow-up' },
 }
 
 function ReminderItem({ r, onClick }: { r: Reminder; onClick: () => void }) {
@@ -50,10 +48,7 @@ function ReminderDropdown({ reminders, onClose }: { reminders: Reminder[]; onClo
 
   const handleClick = (r: Reminder) => {
     onClose()
-    // entityKind (not type) decides the destination — a COMMUNICATION_FOLLOWUP reminder can be
-    // logged against either a customer or a lead, and leads have no dedicated detail route.
-    if (r.entityKind === 'LEAD') navigate('/leads')
-    else if (r.entityId) navigate(`/customers/${r.entityId}`)
+    if (r.entityId) navigate(`/customers/${r.entityId}`)
   }
 
   const overdue = reminders.filter((r) => r.overdueDays > 0)
