@@ -21,6 +21,7 @@ vi.mock('@/api/users', () => ({
     create: vi.fn(() => Promise.resolve({ success: true, message: 'ok', data: users[1] })),
     update: vi.fn(() => Promise.resolve({ success: true, message: 'ok', data: users[1] })),
     deactivate: vi.fn(() => Promise.resolve({ success: true, message: 'ok', data: undefined })),
+    delete: vi.fn(() => Promise.resolve({ success: true, message: 'ok', data: undefined })),
     forceLogout: (userIds: string[]) => forceLogout(userIds),
   },
 }))
@@ -167,6 +168,7 @@ describe('UsersPage — create / edit / deactivate', () => {
     vi.mocked(usersApi.create).mockClear()
     vi.mocked(usersApi.update).mockClear()
     vi.mocked(usersApi.deactivate).mockClear()
+    vi.mocked(usersApi.delete).mockClear()
     toastSuccess.mockClear()
     toastError.mockClear()
     useAuthStore.getState().login({
@@ -251,7 +253,7 @@ describe('UsersPage — create / edit / deactivate', () => {
     expect(toastSuccess).toHaveBeenCalledWith('User deactivated')
   })
 
-  it('an already-inactive user has no Deactivate button', async () => {
+  it('an already-inactive user has no Deactivate button, but does have a Delete button', async () => {
     vi.mocked(usersApi.getAll).mockResolvedValueOnce({
       success: true, message: 'ok', timestamp: '2026-01-01T00:00:00',
       data: [...users, { id: 'agent-3', name: 'Dave Inactive', email: 'dave@test.com', role: 'AGENT', active: false, createdAt: '2026-01-01T00:00:00' }],
@@ -261,7 +263,35 @@ describe('UsersPage — create / edit / deactivate', () => {
     await waitFor(() => expect(screen.getByText('Dave Inactive')).toBeInTheDocument())
     const row = screen.getByText('Dave Inactive').closest('tr')!
     expect(within(row).queryByRole('button', { name: /deactivate/i })).not.toBeInTheDocument()
+    expect(within(row).getByRole('button', { name: /delete/i })).toBeInTheDocument()
     expect(within(row).getByText('Inactive')).toBeInTheDocument()
+  })
+
+  it('an active user has no Delete button', async () => {
+    renderUsersPage()
+
+    await waitFor(() => expect(screen.getByText('Bob Agent')).toBeInTheDocument())
+    const row = screen.getByText('Bob Agent').closest('tr')!
+    expect(within(row).queryByRole('button', { name: /delete/i })).not.toBeInTheDocument()
+  })
+
+  it('deleting an inactive user opens a confirm dialog labeled "Delete Permanently", and confirming calls delete', async () => {
+    vi.mocked(usersApi.getAll).mockResolvedValueOnce({
+      success: true, message: 'ok', timestamp: '2026-01-01T00:00:00',
+      data: [...users, { id: 'agent-3', name: 'Dave Inactive', email: 'dave@test.com', role: 'AGENT', active: false, createdAt: '2026-01-01T00:00:00' }],
+    })
+    const user = userEvent.setup()
+    renderUsersPage()
+
+    await waitFor(() => expect(screen.getByText('Dave Inactive')).toBeInTheDocument())
+    const row = screen.getByText('Dave Inactive').closest('tr')!
+    await user.click(within(row).getByRole('button', { name: /delete/i }))
+
+    expect(screen.getByText(/permanently delete "dave inactive" \(dave@test\.com\)/i)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Delete Permanently' }))
+
+    await waitFor(() => expect(usersApi.delete).toHaveBeenCalledWith('agent-3'))
+    expect(toastSuccess).toHaveBeenCalledWith('User permanently deleted')
   })
 })
 
