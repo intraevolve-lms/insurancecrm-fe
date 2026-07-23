@@ -294,12 +294,14 @@ export default function UsersPage() {
                   </td>
                   <td className="hs-td">
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => openEdit(u)}
-                        className="flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium text-[#516F90] hover:bg-[#F5F8FA] transition"
-                      >
-                        <Pencil className="h-3.5 w-3.5" /> Edit
-                      </button>
+                      {u.active && (
+                        <button
+                          onClick={() => openEdit(u)}
+                          className="flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium text-[#516F90] hover:bg-[#F5F8FA] transition"
+                        >
+                          <Pencil className="h-3.5 w-3.5" /> Edit
+                        </button>
+                      )}
                       {u.active ? (
                         <button
                           onClick={() => setDeactivateTarget(u)}

@@ -267,6 +267,19 @@ describe('UsersPage — create / edit / deactivate', () => {
     expect(within(row).getByText('Inactive')).toBeInTheDocument()
   })
 
+  it('an already-inactive user has no Edit button either — Delete is the only action', async () => {
+    vi.mocked(usersApi.getAll).mockResolvedValueOnce({
+      success: true, message: 'ok', timestamp: '2026-01-01T00:00:00',
+      data: [...users, { id: 'agent-3', name: 'Dave Inactive', email: 'dave@test.com', role: 'AGENT', active: false, createdAt: '2026-01-01T00:00:00' }],
+    })
+    renderUsersPage()
+
+    await waitFor(() => expect(screen.getByText('Dave Inactive')).toBeInTheDocument())
+    const row = screen.getByText('Dave Inactive').closest('tr')!
+    expect(within(row).queryByRole('button', { name: /edit/i })).not.toBeInTheDocument()
+    expect(within(row).getByRole('button', { name: /delete/i })).toBeInTheDocument()
+  })
+
   it('an active user has no Delete button', async () => {
     renderUsersPage()
 
