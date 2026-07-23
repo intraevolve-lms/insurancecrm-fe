@@ -61,6 +61,16 @@ describe('NewCustomersPage — rendering and role scoping (mirrors CustomersPage
     vi.mocked(customersApi.getNew).mockClear()
   })
 
+  it('shows "New Lead" as the page heading, not "New Customers"', async () => {
+    useAuthStore.getState().login({
+      token: 't', refreshToken: 'rt', userId: 'agent-1', name: 'Agent One', email: 'a@test.com', role: 'AGENT',
+    })
+    renderPage()
+
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'New Lead' })).toBeInTheDocument())
+    expect(screen.queryByText('New Customers')).not.toBeInTheDocument()
+  })
+
   it('renders each uncontacted customer with name, email, expiry date, and created date', async () => {
     useAuthStore.getState().login({
       token: 't', refreshToken: 'rt', userId: 'agent-1', name: 'Agent One', email: 'a@test.com', role: 'AGENT',
