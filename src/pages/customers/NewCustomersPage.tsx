@@ -56,7 +56,7 @@ export default function NewCustomersPage() {
   return (
     <div>
       <PageHeader
-        title="New Customers"
+        title="New Lead"
         description={`${totalElements} customer${totalElements !== 1 ? 's' : ''} awaiting first contact`}
       />
 

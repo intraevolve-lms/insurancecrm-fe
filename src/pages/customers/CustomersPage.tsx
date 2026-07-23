@@ -134,7 +134,7 @@ export default function CustomersPage() {
   const [selectedIds, setSelectedIds]     = useState<Set<string>>(new Set())
   const [bulkAssignOpen, setBulkAssignOpen] = useState(false)
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
-  const [exportAgentId, setExportAgentId] = useState('')
+  const [agentFilter, setAgentFilter] = useState('')
   const [page, setPage]                   = useState(0)
   const [sortField, setSortField]         = useState<'premium' | 'expiryDate' | null>(null)
   const [sortDir, setSortDir]             = useState<'asc' | 'desc'>('asc')
@@ -149,16 +149,17 @@ export default function CustomersPage() {
   useEffect(() => {
     setSelectedIds(new Set())
     setPage(0)
-  }, [debouncedSearch, outcomeFilter, sortField, sortDir])
+  }, [debouncedSearch, outcomeFilter, sortField, sortDir, agentFilter])
 
   const listParams = {
     page, size: PAGE_SIZE,
     sortBy: sortField ?? undefined, sortDir,
     outcome: outcomeFilter ?? undefined,
+    assignedAgentId: agentFilter || undefined,
   }
 
   const { data, isLoading } = useQuery({
-    queryKey: ['customers', userId, debouncedSearch, page, sortField, sortDir, outcomeFilter],
+    queryKey: ['customers', userId, debouncedSearch, page, sortField, sortDir, outcomeFilter, agentFilter],
     queryFn: () => debouncedSearch.trim()
       ? customersApi.search(debouncedSearch.trim(), listParams)
       : customersApi.getAll(listParams),
@@ -277,14 +278,14 @@ export default function CustomersPage() {
               <>
                 <select
                   className="form-select"
-                  value={exportAgentId}
-                  onChange={(e) => setExportAgentId(e.target.value)}
-                  title="Filter export by agent"
+                  value={agentFilter}
+                  onChange={(e) => setAgentFilter(e.target.value)}
+                  title="Filter by agent (also scopes Export)"
                 >
                   <option value="">All Agents</option>
                   {agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                 </select>
-                <button onClick={() => exportApi.exportCustomers(exportAgentId || undefined).catch(() => toast.error('Export failed'))} className="btn-secondary">
+                <button onClick={() => exportApi.exportCustomers(agentFilter || undefined).catch(() => toast.error('Export failed'))} className="btn-secondary">
                   <Download className="h-4 w-4" /> Export
                 </button>
                 <button onClick={() => setImportOpen(true)} className="btn-secondary">

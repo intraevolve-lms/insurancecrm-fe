@@ -9,6 +9,7 @@ export type CommunicationOutcome =
   | 'NEXT_YEAR'
   | 'SALE_CLOSE'
   | 'LANGUAGE_ISSUE'
+  | 'NOT_INTERESTED'
 
 export interface CommunicationLog {
   id: string

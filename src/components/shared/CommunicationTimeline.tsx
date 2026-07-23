@@ -27,6 +27,7 @@ export const OUTCOME_META: Record<CommunicationOutcome, { label: string; color: 
   NEXT_YEAR:   { label: 'Next Year',   color: 'text-purple-700', bg: 'bg-purple-50 border-purple-200' },
   SALE_CLOSE:  { label: 'Sale Close',  color: 'text-emerald-700',bg: 'bg-emerald-50 border-emerald-200' },
   LANGUAGE_ISSUE: { label: 'Language Issue', color: 'text-pink-700', bg: 'bg-pink-50 border-pink-200' },
+  NOT_INTERESTED: { label: 'Not Interested', color: 'text-red-700', bg: 'bg-red-50 border-red-200' },
 }
 
 const OUTCOMES = Object.keys(OUTCOME_META) as CommunicationOutcome[]

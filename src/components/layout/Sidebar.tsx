@@ -1,18 +1,14 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
 import {
-  LayoutDashboard, Users, Award,
-  UserCog, LogOut, X, KeyRound, UserPlus,
+  LayoutDashboard, Award,
+  UserCog, LogOut, X, KeyRound,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { queryClient } from '@/lib/queryClient'
-import { customersApi } from '@/api/customers'
 import logoIcon from '@/assets/logo-icon.png'
 
 const navItems = [
   { to: '/dashboard',        label: 'Dashboard',        Icon: LayoutDashboard },
-  { to: '/customers',        label: 'Customers',        Icon: Users },
-  { to: '/new-customers',    label: 'New Customers',    Icon: UserPlus },
   { to: '/agent-performance', label: 'Agent Performance', Icon: Award },
 ]
 
@@ -23,13 +19,6 @@ interface Props {
 export function Sidebar({ onClose }: Props) {
   const { name, email, role, logout } = useAuthStore()
   const navigate = useNavigate()
-
-  const { data: newCustomersData } = useQuery({
-    queryKey: ['customers-new', 'count'],
-    queryFn: () => customersApi.getNew({ page: 0, size: 1 }),
-    refetchInterval: 5 * 60 * 1000, // poll every 5 minutes, same cadence as the reminder bell
-  })
-  const newCustomersCount = newCustomersData?.data.totalElements ?? 0
 
   const initials = name
     ? name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
@@ -84,11 +73,6 @@ export function Sidebar({ onClose }: Props) {
           >
             <Icon className="h-4 w-4 flex-shrink-0" />
             <span className="flex-1">{label}</span>
-            {to === '/new-customers' && newCustomersCount > 0 && (
-              <span className="min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-white/20 text-white text-[10px] font-bold px-1 flex-shrink-0">
-                {newCustomersCount > 99 ? '99+' : newCustomersCount}
-              </span>
-            )}
           </NavLink>
         ))}
 

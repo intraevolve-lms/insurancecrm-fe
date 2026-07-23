@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import {
   Users, AlertTriangle,
   XCircle, RefreshCw, Bell, MessageSquare,
-  PhoneForwarded, PhoneIncoming, UserPlus, PhoneCall, PhoneOff, PhoneMissed, CalendarClock, Languages,
+  PhoneForwarded, PhoneIncoming, UserPlus, PhoneCall, PhoneOff, PhoneMissed, CalendarClock, Languages, ThumbsDown,
+  CheckCircle2,
 } from 'lucide-react'
 import { dashboardApi } from '@/api/dashboard'
 import { remindersApi } from '@/api/reminders'
+import { customersApi } from '@/api/customers'
 import { LoadingSpinner } from '@/components/shared/LoadingSpinner'
 import { OUTCOME_META } from '@/components/shared/CommunicationTimeline'
 import type { DashboardSummary } from '@/types/dashboard'
@@ -21,13 +23,14 @@ const OUTCOME_STAT_ICONS: Record<CommunicationOutcome, React.ElementType> = {
   SWITCH_OFF:  PhoneOff,
   HANG_UP:     PhoneMissed,
   NEXT_YEAR:   CalendarClock,
-  SALE_CLOSE:  PhoneCall,
+  SALE_CLOSE:  CheckCircle2,
   LANGUAGE_ISSUE: Languages,
+  NOT_INTERESTED: ThumbsDown,
 }
 
-// Dashboard funnel excludes SALE_CLOSE — once closed, the customer's policy is treated as sold
 const DASHBOARD_OUTCOMES: CommunicationOutcome[] = [
   'MY_CALLBACK', 'CALLBACK', 'PROSPECT', 'RINGING', 'SWITCH_OFF', 'HANG_UP', 'NEXT_YEAR', 'LANGUAGE_ISSUE',
+  'SALE_CLOSE', 'NOT_INTERESTED',
 ]
 
 const REMINDER_ICONS: Record<ReminderType, React.ElementType> = {
@@ -66,9 +69,10 @@ const OUTCOME_STAT_COLORS: Record<CommunicationOutcome, { bg: string; color: str
   NEXT_YEAR:   { bg: 'bg-purple-50',  color: 'text-purple-600' },
   SALE_CLOSE:  { bg: 'bg-emerald-50', color: 'text-emerald-600' },
   LANGUAGE_ISSUE: { bg: 'bg-pink-50', color: 'text-pink-600' },
+  NOT_INTERESTED: { bg: 'bg-red-50', color: 'text-red-600' },
 }
 
-function buildStats(summary: DashboardSummary) {
+function buildStats(summary: DashboardSummary, newLeadCount: number) {
   const outcomeStats = DASHBOARD_OUTCOMES.map((outcome) => ({
     value: summary.outcomeCounts[outcome] ?? 0,
     label: OUTCOME_META[outcome].label,
@@ -80,6 +84,7 @@ function buildStats(summary: DashboardSummary) {
 
   return [
     { value: summary.totalCustomers, label: 'Total Customers', icon: Users, bg: 'bg-[#E5F5F8]', color: 'text-[#0091AE]', link: '/customers' },
+    { value: newLeadCount, label: 'New Lead', icon: UserPlus, bg: 'bg-teal-50', color: 'text-teal-600', link: '/new-customers' },
     ...outcomeStats,
   ]
 }
@@ -95,6 +100,12 @@ export default function DashboardPage() {
     queryKey: ['reminders'],
     queryFn: () => remindersApi.getAll(),
   })
+
+  const { data: newCustomersData } = useQuery({
+    queryKey: ['customers-new', 'count'],
+    queryFn: () => customersApi.getNew({ page: 0, size: 1 }),
+  })
+  const newLeadCount = newCustomersData?.data.totalElements ?? 0
 
   const reminders = remindersData?.data ?? []
   const overdueReminders = reminders.filter((r) => r.overdueDays > 0)
@@ -121,7 +132,7 @@ export default function DashboardPage() {
 
   const summary = data.data
 
-  const stats = buildStats(summary) as Array<{
+  const stats = buildStats(summary, newLeadCount) as Array<{
     value: number; label: string; icon: React.ElementType
     bg: string; color: string; link: string; warn?: boolean
   }>

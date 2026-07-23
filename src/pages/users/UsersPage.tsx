@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as Dialog from '@radix-ui/react-dialog'
-import { Plus, X, Pencil, UserX, Users, ShieldAlert, LogOut } from 'lucide-react'
+import { Plus, X, Pencil, UserX, Trash2, Users, ShieldAlert, LogOut } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { usersApi } from '@/api/users'
@@ -123,6 +123,7 @@ export default function UsersPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [deactivateTarget, setDeactivateTarget] = useState<User | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<User | null>(null)
   const [selectedAgentIds, setSelectedAgentIds] = useState<string[]>([])
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false)
 
@@ -154,6 +155,12 @@ export default function UsersPage() {
     mutationFn: (id: string) => usersApi.deactivate(id),
     onSuccess: () => { toast.success('User deactivated'); setDeactivateTarget(null); invalidate() },
     onError: () => toast.error('Failed to deactivate user'),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => usersApi.delete(id),
+    onSuccess: () => { toast.success('User permanently deleted'); setDeleteTarget(null); invalidate() },
+    onError: () => toast.error('Failed to delete user'),
   })
 
   const forceLogoutMutation = useMutation({
@@ -287,18 +294,27 @@ export default function UsersPage() {
                   </td>
                   <td className="hs-td">
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => openEdit(u)}
-                        className="flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium text-[#516F90] hover:bg-[#F5F8FA] transition"
-                      >
-                        <Pencil className="h-3.5 w-3.5" /> Edit
-                      </button>
                       {u.active && (
+                        <button
+                          onClick={() => openEdit(u)}
+                          className="flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium text-[#516F90] hover:bg-[#F5F8FA] transition"
+                        >
+                          <Pencil className="h-3.5 w-3.5" /> Edit
+                        </button>
+                      )}
+                      {u.active ? (
                         <button
                           onClick={() => setDeactivateTarget(u)}
                           className="flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50 transition"
                         >
                           <UserX className="h-3.5 w-3.5" /> Deactivate
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => setDeleteTarget(u)}
+                          className="flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50 transition"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" /> Delete
                         </button>
                       )}
                     </div>
@@ -326,6 +342,17 @@ export default function UsersPage() {
         onConfirm={() => deactivateTarget && deactivateMutation.mutate(deactivateTarget.id)}
         loading={deactivateMutation.isPending}
         destructive
+      />
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(v) => { if (!v) setDeleteTarget(null) }}
+        title="Delete User Permanently"
+        description={`Permanently delete "${deleteTarget?.name}" (${deleteTarget?.email})? This cannot be undone — their account and login are gone for good. The email will become available for a new account.`}
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+        loading={deleteMutation.isPending}
+        destructive
+        confirmLabel="Delete Permanently"
       />
 
       <ConfirmDialog

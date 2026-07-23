@@ -9,7 +9,7 @@ import type { Reminder, ReminderType } from '@/types/reminder'
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'Dashboard',
   '/customers': 'Customers',
-  '/new-customers': 'New Customers',
+  '/new-customers': 'New Lead',
   '/agent-performance': 'Agent Performance',
   '/users':     'User Management',
 }

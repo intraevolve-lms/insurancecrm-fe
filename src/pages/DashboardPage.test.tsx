@@ -18,6 +18,15 @@ vi.mock('@/api/reminders', () => ({
   remindersApi: { getAll: vi.fn(() => Promise.resolve({ success: true, message: 'ok', data: [] })) },
 }))
 
+vi.mock('@/api/customers', () => ({
+  customersApi: {
+    getNew: vi.fn(() => Promise.resolve({
+      success: true, message: 'ok', timestamp: '2026-01-01T00:00:00',
+      data: { content: [], page: 0, size: 1, totalElements: 3, totalPages: 3 },
+    })),
+  },
+}))
+
 function renderDashboard() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
@@ -26,6 +35,7 @@ function renderDashboard() {
         <Routes>
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/customers" element={<div>Customers Page Marker</div>} />
+          <Route path="/new-customers" element={<div>New Customers Page Marker</div>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -69,5 +79,17 @@ describe('DashboardPage (Overview) — customer-only scope', () => {
     await user.click(screen.getByText('Total Customers'))
 
     await waitFor(() => expect(screen.getByText('Customers Page Marker')).toBeInTheDocument())
+  })
+
+  it('shows a New Lead tile with the uncontacted-customer count, and clicking it navigates to the New Customers queue', async () => {
+    const user = userEvent.setup()
+    renderDashboard()
+
+    await waitFor(() => expect(screen.getByText('New Lead')).toBeInTheDocument())
+    expect(screen.getByText('3')).toBeInTheDocument()
+
+    await user.click(screen.getByText('New Lead'))
+
+    await waitFor(() => expect(screen.getByText('New Customers Page Marker')).toBeInTheDocument())
   })
 })
