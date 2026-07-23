@@ -9,6 +9,7 @@ export interface CustomerListParams {
   sortBy?: 'premium' | 'expiryDate'
   sortDir?: 'asc' | 'desc'
   outcome?: CommunicationOutcome
+  assignedAgentId?: string
 }
 
 export interface NewCustomersParams {

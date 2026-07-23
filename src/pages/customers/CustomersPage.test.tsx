@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { customersApi } from '@/api/customers'
+import { exportApi } from '@/api/export'
 import type { Customer } from '@/types/customer'
 import CustomersPage from './CustomersPage'
 
@@ -22,22 +23,30 @@ const customers: Customer[] = [
     id: 'c3', name: 'No Outcome Customer', phone: '9333333333',
     createdAt: '2026-01-01T00:00:00', updatedAt: '2026-01-01T00:00:00',
   },
+  {
+    id: 'c4', name: 'Smiths Customer', phone: '9444444444',
+    assignedAgentId: 'a1', assignedAgentName: 'Agent Smith',
+    createdAt: '2026-01-01T00:00:00', updatedAt: '2026-01-01T00:00:00',
+  },
 ]
 
 function pageOf(list: Customer[]) {
   return { content: list, page: 0, size: 20, totalElements: list.length, totalPages: 1 }
 }
 
+function applyFilters(list: Customer[], params: { outcome?: string; assignedAgentId?: string }) {
+  let filtered = list
+  if (params.outcome) filtered = filtered.filter((c) => c.lastOutcome === params.outcome)
+  if (params.assignedAgentId) filtered = filtered.filter((c) => c.assignedAgentId === params.assignedAgentId)
+  return filtered
+}
+
 vi.mock('@/api/customers', () => ({
   customersApi: {
-    getAll: vi.fn((params: { outcome?: string } = {}) => {
-      const filtered = params.outcome ? customers.filter((c) => c.lastOutcome === params.outcome) : customers
-      return Promise.resolve({ success: true, message: 'ok', data: pageOf(filtered) })
-    }),
-    search: vi.fn((_q: string, params: { outcome?: string } = {}) => {
-      const filtered = params.outcome ? customers.filter((c) => c.lastOutcome === params.outcome) : customers
-      return Promise.resolve({ success: true, message: 'ok', data: pageOf(filtered) })
-    }),
+    getAll: vi.fn((params: { outcome?: string; assignedAgentId?: string } = {}) =>
+      Promise.resolve({ success: true, message: 'ok', data: pageOf(applyFilters(customers, params)) })),
+    search: vi.fn((_q: string, params: { outcome?: string; assignedAgentId?: string } = {}) =>
+      Promise.resolve({ success: true, message: 'ok', data: pageOf(applyFilters(customers, params)) })),
     create: vi.fn(() => Promise.resolve({ success: true, message: 'ok', data: customers[0] })),
     update: vi.fn(() => Promise.resolve({ success: true, message: 'ok', data: customers[0] })),
     delete: vi.fn(() => Promise.resolve({ success: true, message: 'ok', data: undefined })),
@@ -125,7 +134,7 @@ describe('CustomersPage — bulk Excel/CSV import and export are admin-only', ()
     await waitFor(() => expect(screen.getByText('Ringing Customer')).toBeInTheDocument())
     expect(screen.queryByRole('button', { name: 'Import' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Export' })).not.toBeInTheDocument()
-    expect(screen.queryByTitle('Filter export by agent')).not.toBeInTheDocument()
+    expect(screen.queryByTitle(/filter by agent/i)).not.toBeInTheDocument()
   })
 
   it('an ADMIN sees the Import and Export buttons', async () => {
@@ -137,7 +146,55 @@ describe('CustomersPage — bulk Excel/CSV import and export are admin-only', ()
     await waitFor(() => expect(screen.getByText('Ringing Customer')).toBeInTheDocument())
     expect(screen.getByRole('button', { name: 'Import' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Export' })).toBeInTheDocument()
-    expect(screen.getByTitle('Filter export by agent')).toBeInTheDocument()
+    expect(screen.getByTitle(/filter by agent/i)).toBeInTheDocument()
+  })
+})
+
+describe('CustomersPage — agent filter dropdown also filters the visible table', () => {
+  beforeEach(() => {
+    vi.mocked(customersApi.getAll).mockClear()
+    useAuthStore.getState().login({
+      token: 't', refreshToken: 'rt', userId: 'admin-1', name: 'Admin One', email: 'admin@test.com', role: 'ADMIN',
+    })
+  })
+
+  it('selecting an agent shows only that agent\'s customers', async () => {
+    const user = userEvent.setup()
+    renderWithProviders('/customers')
+
+    await waitFor(() => expect(screen.getByText('Ringing Customer')).toBeInTheDocument())
+    expect(screen.getByText('Smiths Customer')).toBeInTheDocument()
+
+    await user.selectOptions(screen.getByTitle(/filter by agent/i), 'a1')
+
+    await waitFor(() => expect(screen.queryByText('Ringing Customer')).not.toBeInTheDocument())
+    expect(screen.getByText('Smiths Customer')).toBeInTheDocument()
+  })
+
+  it('the selected agent is also used to scope Export', async () => {
+    const user = userEvent.setup()
+    renderWithProviders('/customers')
+
+    await waitFor(() => expect(screen.getByText('Ringing Customer')).toBeInTheDocument())
+    await user.selectOptions(screen.getByTitle(/filter by agent/i), 'a1')
+    await user.click(screen.getByRole('button', { name: 'Export' }))
+
+    await waitFor(() => expect(exportApi.exportCustomers).toHaveBeenCalledWith('a1'))
+  })
+
+  it('resetting back to "All Agents" restores the full list', async () => {
+    const user = userEvent.setup()
+    renderWithProviders('/customers')
+
+    await waitFor(() => expect(screen.getByText('Ringing Customer')).toBeInTheDocument())
+    const select = screen.getByTitle(/filter by agent/i)
+    await user.selectOptions(select, 'a1')
+    await waitFor(() => expect(screen.queryByText('Ringing Customer')).not.toBeInTheDocument())
+
+    await user.selectOptions(select, '')
+
+    await waitFor(() => expect(screen.getByText('Ringing Customer')).toBeInTheDocument())
+    expect(screen.getByText('Smiths Customer')).toBeInTheDocument()
   })
 })
 
