@@ -4,6 +4,14 @@ on:
   push:
     branches: [main, master]
 
+# Version computation reads the current tag history and a later step pushes a new
+# tag based on it — two runs started close together can both compute the same
+# "next" version before either pushes. Serialize runs so each one sees the
+# previous run's tag before computing its own.
+concurrency:
+  group: docker-publish
+  cancel-in-progress: false
+
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
