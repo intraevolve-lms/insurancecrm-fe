@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { Eye, MessageSquare, PartyPopper, Search, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Eye, MessageSquare, PartyPopper, Search, ArrowUp, ArrowDown, ArrowUpDown, UserCog } from 'lucide-react'
 import { format } from 'date-fns'
 import { customersApi } from '@/api/customers'
+import { usersApi } from '@/api/users'
 import { useAuthStore } from '@/store/authStore'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { LoadingSpinner } from '@/components/shared/LoadingSpinner'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Pagination } from '@/components/shared/Pagination'
 import { CommunicationTimeline } from '@/components/shared/CommunicationTimeline'
+import { BulkAssignDialog } from '@/components/customers/BulkAssignDialog'
 import type { Customer } from '@/types/customer'
 
 const PAGE_SIZE = 20
@@ -17,6 +19,7 @@ const PAGE_SIZE = 20
 export default function NewCustomersPage() {
   const navigate = useNavigate()
   const { role } = useAuthStore()
+  const qc = useQueryClient()
   const [page, setPage] = useState(0)
   const [activityCustomerId, setActivityCustomerId] = useState<string | null>(null)
   const [search, setSearch]             = useState('')
@@ -24,6 +27,9 @@ export default function NewCustomersPage() {
   const debounceRef                     = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [sortField, setSortField]       = useState<'premium' | 'expiryDate' | null>(null)
   const [sortDir, setSortDir]           = useState<'asc' | 'desc'>('asc')
+  const [selectedIds, setSelectedIds]   = useState<Set<string>>(new Set())
+  const [bulkAssignOpen, setBulkAssignOpen] = useState(false)
+  const headerCheckboxRef               = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
@@ -32,6 +38,7 @@ export default function NewCustomersPage() {
   }, [search])
 
   useEffect(() => {
+    setSelectedIds(new Set())
     setPage(0)
   }, [debouncedSearch, sortField, sortDir])
 
@@ -49,9 +56,45 @@ export default function NewCustomersPage() {
     }),
   })
 
+  const { data: agentsData } = useQuery({
+    queryKey: ['users'],
+    queryFn: () => usersApi.getAll(),
+    enabled: role === 'ADMIN',
+  })
+  const agents = (agentsData?.data ?? []).filter((u) => u.active)
+
   const customers: Customer[] = data?.data.content ?? []
   const totalElements = data?.data.totalElements ?? 0
   const totalPages = data?.data.totalPages ?? 0
+
+  useEffect(() => {
+    const visibleIds = new Set(customers.map((c) => c.id))
+    setSelectedIds((prev) => {
+      const next = new Set([...prev].filter((id) => visibleIds.has(id)))
+      return next.size === prev.size ? prev : next
+    })
+  }, [customers])
+
+  useEffect(() => {
+    if (headerCheckboxRef.current) {
+      headerCheckboxRef.current.indeterminate =
+        selectedIds.size > 0 && selectedIds.size < customers.length
+    }
+  }, [selectedIds, customers.length])
+
+  const toggleAll = () => {
+    setSelectedIds((prev) =>
+      prev.size === customers.length ? new Set() : new Set(customers.map((c) => c.id))
+    )
+  }
+  const toggleOne = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   return (
     <div>
@@ -65,6 +108,22 @@ export default function NewCustomersPage() {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#B0C1D4]" />
         <input className="form-input pl-9" placeholder="Search by name or phone…" value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
+
+      {role === 'ADMIN' && selectedIds.size > 0 && (
+        <div className="flex items-center justify-between rounded-lg bg-[#E5F5F8] border border-[#0091AE]/20 px-4 py-2.5 mb-4">
+          <p className="text-sm font-semibold text-[#0091AE]">
+            {selectedIds.size} customer{selectedIds.size !== 1 ? 's' : ''} selected
+          </p>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setSelectedIds(new Set())} className="btn-secondary text-xs px-3 py-1.5">
+              Clear
+            </button>
+            <button onClick={() => setBulkAssignOpen(true)} className="btn-primary text-xs px-3 py-1.5">
+              <UserCog className="h-3.5 w-3.5" /> Assign to Agent
+            </button>
+          </div>
+        </div>
+      )}
 
       {isLoading ? (
         <LoadingSpinner className="py-24" />
@@ -82,6 +141,16 @@ export default function NewCustomersPage() {
           <table className="hs-table">
             <thead>
               <tr>
+                {role === 'ADMIN' && (
+                  <th className="hs-th w-10">
+                    <input
+                      ref={headerCheckboxRef}
+                      type="checkbox"
+                      checked={customers.length > 0 && selectedIds.size === customers.length}
+                      onChange={toggleAll}
+                    />
+                  </th>
+                )}
                 <th className="hs-th">Customer</th>
                 {role === 'ADMIN' && <th className="hs-th">Phone</th>}
                 <th className="hs-th">Email</th>
@@ -112,6 +181,15 @@ export default function NewCustomersPage() {
               {customers.map((c) => (
                 <React.Fragment key={c.id}>
                   <tr className="hs-tr">
+                    {role === 'ADMIN' && (
+                      <td className="hs-td">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(c.id)}
+                          onChange={() => toggleOne(c.id)}
+                        />
+                      </td>
+                    )}
                     <td className="hs-td">
                       <p className="font-semibold text-[#33475B] leading-tight">{c.name}</p>
                       {c.notes && (
@@ -169,7 +247,7 @@ export default function NewCustomersPage() {
                       of this list on the next fetch, since it no longer matches lastOutcome=null. */}
                   {activityCustomerId === c.id && (
                     <tr>
-                      <td colSpan={role === 'ADMIN' ? 8 : 6} className="bg-[#F5F8FA] px-6 py-4 border-b border-[#DFE3EB]">
+                      <td colSpan={role === 'ADMIN' ? 9 : 6} className="bg-[#F5F8FA] px-6 py-4 border-b border-[#DFE3EB]">
                         <CommunicationTimeline
                           entityId={c.id}
                           queryKey={['customer-comms', c.id]}
@@ -190,6 +268,19 @@ export default function NewCustomersPage() {
           />
         </div>
       )}
+
+      <BulkAssignDialog
+        open={bulkAssignOpen}
+        onOpenChange={setBulkAssignOpen}
+        customerIds={[...selectedIds]}
+        customerNames={customers.filter((c) => selectedIds.has(c.id)).map((c) => c.name)}
+        agents={agents}
+        onAssigned={() => {
+          setSelectedIds(new Set())
+          qc.invalidateQueries({ queryKey: ['customers-new'] })
+          qc.invalidateQueries({ queryKey: ['customers'] })
+        }}
+      />
     </div>
   )
 }
