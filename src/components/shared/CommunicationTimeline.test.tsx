@@ -27,11 +27,11 @@ vi.mock('@/api/communications', () => ({
   },
 }))
 
-function renderTimeline() {
+function renderTimeline(onLogged?: () => void) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   const result = render(
     <QueryClientProvider client={queryClient}>
-      <CommunicationTimeline entityId="c1" queryKey={['test-comms', 'c1']} />
+      <CommunicationTimeline entityId="c1" queryKey={['test-comms', 'c1']} onLogged={onLogged} />
     </QueryClientProvider>,
   )
   return { ...result, queryClient }
@@ -225,5 +225,33 @@ describe('CommunicationTimeline — log activity dialog', () => {
     await waitFor(() => expect(communicationsApi.logForCustomer).toHaveBeenCalledWith('c1', expect.objectContaining({
       outcome: 'NOT_INTERESTED',
     })))
+  })
+
+  it('calls onLogged after a successful save', async () => {
+    const user = userEvent.setup()
+    const onLogged = vi.fn()
+    renderTimeline(onLogged)
+
+    await waitFor(() => expect(screen.getByText('Ringing')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: /log activity/i }))
+    await user.click(screen.getByRole('button', { name: /^save$/i }))
+
+    await waitFor(() => expect(onLogged).toHaveBeenCalledTimes(1))
+  })
+
+  it('does not call onLogged when a log is deleted', async () => {
+    const user = userEvent.setup()
+    const onLogged = vi.fn()
+    useAuthStore.getState().login({
+      token: 't', refreshToken: 'rt', userId: 'admin-1', name: 'Admin One', email: 'admin@test.com', role: 'ADMIN',
+    })
+    renderTimeline(onLogged)
+
+    await waitFor(() => expect(screen.getByText('Callback')).toBeInTheDocument())
+    const row = screen.getByText('Callback').closest('.relative.pl-10')!
+    await user.click(row.querySelector('button')!)
+
+    await waitFor(() => expect(communicationsApi.delete).toHaveBeenCalledWith('log-2'))
+    expect(onLogged).not.toHaveBeenCalled()
   })
 })

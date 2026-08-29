@@ -106,9 +106,10 @@ function LogActivityDialog({ open, onOpenChange, onSave, loading }: {
 interface Props {
   entityId: string
   queryKey: string[]
+  onLogged?: () => void
 }
 
-export function CommunicationTimeline({ entityId, queryKey }: Props) {
+export function CommunicationTimeline({ entityId, queryKey, onLogged }: Props) {
   const { role, userId } = useAuthStore()
   const qc = useQueryClient()
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -138,7 +139,7 @@ export function CommunicationTimeline({ entityId, queryKey }: Props) {
 
   const logMutation = useMutation({
     mutationFn: (d: CreateCommunicationLogRequest) => communicationsApi.logForCustomer(entityId, d),
-    onSuccess: () => { toast.success('Activity logged'); setDialogOpen(false); invalidate() },
+    onSuccess: () => { toast.success('Activity logged'); setDialogOpen(false); invalidate(); onLogged?.() },
     onError: () => toast.error('Failed to log activity'),
   })
 

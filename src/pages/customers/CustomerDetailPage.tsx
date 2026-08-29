@@ -134,6 +134,7 @@ export default function CustomerDetailPage() {
         <CommunicationTimeline
           entityId={id!}
           queryKey={['customer-comms', id!]}
+          onLogged={() => navigate('/customers')}
         />
       </div>
     </div>
