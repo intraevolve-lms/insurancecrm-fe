@@ -27,11 +27,11 @@ vi.mock('@/api/communications', () => ({
   },
 }))
 
-function renderTimeline() {
+function renderTimeline(onLogged?: () => void) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   const result = render(
     <QueryClientProvider client={queryClient}>
-      <CommunicationTimeline entityId="c1" queryKey={['test-comms', 'c1']} />
+      <CommunicationTimeline entityId="c1" queryKey={['test-comms', 'c1']} onLogged={onLogged} />
     </QueryClientProvider>,
   )
   return { ...result, queryClient }
@@ -225,5 +225,182 @@ describe('CommunicationTimeline — log activity dialog', () => {
     await waitFor(() => expect(communicationsApi.logForCustomer).toHaveBeenCalledWith('c1', expect.objectContaining({
       outcome: 'NOT_INTERESTED',
     })))
+  })
+
+  it('selecting Sale Close reveals the Sale Details fields', async () => {
+    const user = userEvent.setup()
+    renderTimeline()
+
+    await waitFor(() => expect(screen.getByText('Ringing')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: /log activity/i }))
+    expect(screen.queryByText('Sale Details *')).not.toBeInTheDocument()
+
+    await user.selectOptions(screen.getByRole('combobox'), 'SALE_CLOSE')
+
+    expect(screen.getByText('Sale Details *')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('e.g. 25000')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('e.g. HDFC Ergo')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('e.g. Optima Secure')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('e.g. Family Floater')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('e.g. Mumbai')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('e.g. Fresh')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('e.g. 1 Year')).toBeInTheDocument()
+  })
+
+  it('the Premium field rejects non-numeric characters as they are typed', async () => {
+    const user = userEvent.setup()
+    renderTimeline()
+
+    await waitFor(() => expect(screen.getByText('Ringing')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: /log activity/i }))
+    await user.selectOptions(screen.getByRole('combobox'), 'SALE_CLOSE')
+
+    const premiumInput = screen.getByPlaceholderText('e.g. 25000')
+    await user.type(premiumInput, 'abc123.5xyz')
+
+    expect(premiumInput).toHaveValue('123.5')
+  })
+
+  it('saving a Sale Close with missing fields is blocked client-side', async () => {
+    const user = userEvent.setup()
+    renderTimeline()
+
+    await waitFor(() => expect(screen.getByText('Ringing')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: /log activity/i }))
+    await user.selectOptions(screen.getByRole('combobox'), 'SALE_CLOSE')
+    await user.click(screen.getByRole('button', { name: /^save$/i }))
+
+    expect(communicationsApi.logForCustomer).not.toHaveBeenCalled()
+    expect(screen.getByRole('heading', { name: 'Log Activity' })).toBeInTheDocument()
+  })
+
+  it('saving a Sale Close with all fields filled sends the sale details, with premium as a number', async () => {
+    const user = userEvent.setup()
+    renderTimeline()
+
+    await waitFor(() => expect(screen.getByText('Ringing')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: /log activity/i }))
+    await user.selectOptions(screen.getByRole('combobox'), 'SALE_CLOSE')
+
+    await user.type(screen.getByPlaceholderText('e.g. 25000'), '25000')
+    await user.type(screen.getByPlaceholderText('e.g. HDFC Ergo'), 'Acme Insurance')
+    await user.type(screen.getByPlaceholderText('e.g. Optima Secure'), 'Gold Plan')
+    await user.type(screen.getByPlaceholderText('e.g. Family Floater'), 'Family Floater')
+    await user.type(screen.getByPlaceholderText('e.g. Mumbai'), 'Mumbai')
+    await user.type(screen.getByPlaceholderText('e.g. Fresh'), 'Fresh')
+    await user.type(screen.getByPlaceholderText('e.g. 1 Year'), '1 Year')
+    await user.click(screen.getByRole('button', { name: /^save$/i }))
+
+    await waitFor(() => expect(communicationsApi.logForCustomer).toHaveBeenCalledWith('c1', expect.objectContaining({
+      outcome: 'SALE_CLOSE',
+      premium: 25000,
+      companyName: 'Acme Insurance',
+      planName: 'Gold Plan',
+      scheme: 'Family Floater',
+      city: 'Mumbai',
+      portabilityOrFresh: 'Fresh',
+      tenure: '1 Year',
+    })))
+  })
+
+  it('switching away from Sale Close before saving does not send stale sale fields', async () => {
+    const user = userEvent.setup()
+    renderTimeline()
+
+    await waitFor(() => expect(screen.getByText('Ringing')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: /log activity/i }))
+    await user.selectOptions(screen.getByRole('combobox'), 'SALE_CLOSE')
+    await user.type(screen.getByPlaceholderText('e.g. 25000'), '25000')
+    await user.type(screen.getByPlaceholderText('e.g. HDFC Ergo'), 'Acme Insurance')
+
+    await user.selectOptions(screen.getByRole('combobox'), 'CALLBACK')
+    await user.click(screen.getByRole('button', { name: /^save$/i }))
+
+    await waitFor(() => expect(communicationsApi.logForCustomer).toHaveBeenCalledWith('c1', expect.objectContaining({
+      outcome: 'CALLBACK', premium: undefined, companyName: undefined,
+    })))
+  })
+
+  it('calls onLogged after a successful save', async () => {
+    const user = userEvent.setup()
+    const onLogged = vi.fn()
+    renderTimeline(onLogged)
+
+    await waitFor(() => expect(screen.getByText('Ringing')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: /log activity/i }))
+    await user.click(screen.getByRole('button', { name: /^save$/i }))
+
+    await waitFor(() => expect(onLogged).toHaveBeenCalledTimes(1))
+  })
+
+  it('does not call onLogged when a log is deleted', async () => {
+    const user = userEvent.setup()
+    const onLogged = vi.fn()
+    useAuthStore.getState().login({
+      token: 't', refreshToken: 'rt', userId: 'admin-1', name: 'Admin One', email: 'admin@test.com', role: 'ADMIN',
+    })
+    renderTimeline(onLogged)
+
+    await waitFor(() => expect(screen.getByText('Callback')).toBeInTheDocument())
+    const row = screen.getByText('Callback').closest('.relative.pl-10')!
+    await user.click(row.querySelector('button')!)
+
+    await waitFor(() => expect(communicationsApi.delete).toHaveBeenCalledWith('log-2'))
+    expect(onLogged).not.toHaveBeenCalled()
+  })
+})
+
+describe('CommunicationTimeline — viewing Sale Close details', () => {
+  const saleCloseLog: CommunicationLog = {
+    id: 'log-3', customerId: 'c1', channel: 'CALL', outcome: 'SALE_CLOSE',
+    loggedBy: 'agent-1', loggedByName: 'Agent One', loggedAt: '2026-01-06T11:00:00',
+    premium: 25000, companyName: 'Acme Insurance', planName: 'Gold Plan',
+    scheme: 'Family Floater', city: 'Mumbai', portabilityOrFresh: 'Fresh', tenure: '1 Year',
+  }
+
+  beforeEach(() => {
+    useAuthStore.getState().login({
+      token: 't', refreshToken: 'rt', userId: 'agent-1', name: 'Agent One', email: 'a@test.com', role: 'AGENT',
+    })
+    vi.mocked(communicationsApi.getByCustomer).mockResolvedValueOnce({
+      success: true, message: 'ok', data: [saleCloseLog], timestamp: '2026-01-01T00:00:00',
+    })
+  })
+
+  it('shows the premium inline on the collapsed row', async () => {
+    renderTimeline()
+
+    await waitFor(() => expect(screen.getByText('Sale Close')).toBeInTheDocument())
+    expect(screen.getByText('₹25,000')).toBeInTheDocument()
+  })
+
+  it('expanding the log reveals the full Sale Details', async () => {
+    const user = userEvent.setup()
+    renderTimeline()
+
+    await waitFor(() => expect(screen.getByText('Sale Close')).toBeInTheDocument())
+    expect(screen.queryByText('Acme Insurance')).not.toBeInTheDocument()
+
+    await user.click(screen.getByText('Sale Close'))
+
+    expect(screen.getByText('Sale Details')).toBeInTheDocument()
+    expect(screen.getByText('Acme Insurance')).toBeInTheDocument()
+    expect(screen.getByText('Gold Plan')).toBeInTheDocument()
+    expect(screen.getByText('Family Floater')).toBeInTheDocument()
+    expect(screen.getByText('Mumbai')).toBeInTheDocument()
+    expect(screen.getByText('Fresh')).toBeInTheDocument()
+    expect(screen.getByText('1 Year')).toBeInTheDocument()
+  })
+
+  it('collapsing the log hides the Sale Details again', async () => {
+    const user = userEvent.setup()
+    renderTimeline()
+
+    await waitFor(() => expect(screen.getByText('Sale Close')).toBeInTheDocument())
+    await user.click(screen.getByText('Sale Close'))
+    expect(screen.getByText('Acme Insurance')).toBeInTheDocument()
+
+    await user.click(screen.getByText('Sale Close'))
+    expect(screen.queryByText('Acme Insurance')).not.toBeInTheDocument()
   })
 })

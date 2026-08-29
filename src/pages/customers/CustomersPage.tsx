@@ -20,7 +20,7 @@ import { OUTCOME_META } from '@/components/shared/CommunicationTimeline'
 import type { Customer, CreateCustomerRequest } from '@/types/customer'
 import type { CommunicationOutcome } from '@/types/communication'
 
-const PAGE_SIZE = 20
+const DEFAULT_PAGE_SIZE = 20
 
 const EMPTY_FORM: CreateCustomerRequest = {
   name: '', phone: '', email: '', address: '', notes: '',
@@ -136,6 +136,7 @@ export default function CustomersPage() {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
   const [agentFilter, setAgentFilter] = useState('')
   const [page, setPage]                   = useState(0)
+  const [pageSize, setPageSize]           = useState(DEFAULT_PAGE_SIZE)
   const [sortField, setSortField]         = useState<'premium' | 'expiryDate' | null>(null)
   const [sortDir, setSortDir]             = useState<'asc' | 'desc'>('asc')
   const headerCheckboxRef                 = useRef<HTMLInputElement>(null)
@@ -152,18 +153,23 @@ export default function CustomersPage() {
   }, [debouncedSearch, outcomeFilter, sortField, sortDir, agentFilter])
 
   const listParams = {
-    page, size: PAGE_SIZE,
+    page, size: pageSize,
     sortBy: sortField ?? undefined, sortDir,
     outcome: outcomeFilter ?? undefined,
     assignedAgentId: agentFilter || undefined,
   }
 
   const { data, isLoading } = useQuery({
-    queryKey: ['customers', userId, debouncedSearch, page, sortField, sortDir, outcomeFilter, agentFilter],
+    queryKey: ['customers', userId, debouncedSearch, page, pageSize, sortField, sortDir, outcomeFilter, agentFilter],
     queryFn: () => debouncedSearch.trim()
       ? customersApi.search(debouncedSearch.trim(), listParams)
       : customersApi.getAll(listParams),
   })
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size)
+    setPage(0)
+  }
 
   const { data: agentsData } = useQuery({
     queryKey: ['users'],
@@ -494,8 +500,9 @@ export default function CustomersPage() {
             page={page}
             totalPages={totalPages}
             totalElements={totalElements}
-            pageSize={PAGE_SIZE}
+            pageSize={pageSize}
             onPageChange={setPage}
+            onPageSizeChange={handlePageSizeChange}
           />
         </div>
       )}

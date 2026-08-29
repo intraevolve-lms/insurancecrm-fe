@@ -32,11 +32,26 @@ export const OUTCOME_META: Record<CommunicationOutcome, { label: string; color: 
 
 const OUTCOMES = Object.keys(OUTCOME_META) as CommunicationOutcome[]
 
-const EMPTY_FORM: CreateCommunicationLogRequest = {
+// Premium is entered as text but restricted to a plain number as it's typed, so the monthly
+// sale-closed total on the Dashboard can always be summed reliably.
+const PREMIUM_PATTERN = /^\d*\.?\d*$/
+
+// Local dialog state keeps premium as a string (raw textbox input); it's converted to a
+// number only when actually saving as a Sale Close.
+type SaleCloseForm = Omit<CreateCommunicationLogRequest, 'premium'> & { premium: string }
+
+const EMPTY_FORM: SaleCloseForm = {
   channel: 'CALL',
   outcome: 'RINGING',
   notes: '',
   followUpDate: undefined,
+  premium: '',
+  companyName: '',
+  planName: '',
+  scheme: '',
+  city: '',
+  portabilityOrFresh: '',
+  tenure: '',
 }
 
 // ── Log Activity Dialog ────────────────────────────────────────────────────
@@ -45,9 +60,36 @@ function LogActivityDialog({ open, onOpenChange, onSave, loading }: {
   open: boolean; onOpenChange: (v: boolean) => void
   onSave: (d: CreateCommunicationLogRequest) => void; loading: boolean
 }) {
-  const [form, setForm] = useState<CreateCommunicationLogRequest>(EMPTY_FORM)
-  const set = <K extends keyof CreateCommunicationLogRequest>(k: K, v: CreateCommunicationLogRequest[K]) =>
+  const [form, setForm] = useState<SaleCloseForm>(EMPTY_FORM)
+  const set = <K extends keyof SaleCloseForm>(k: K, v: SaleCloseForm[K]) =>
     setForm((f) => ({ ...f, [k]: v }))
+
+  const isSaleClose = form.outcome === 'SALE_CLOSE'
+
+  const handleSave = () => {
+    if (isSaleClose) {
+      const premiumValid = PREMIUM_PATTERN.test(form.premium.trim()) && Number(form.premium) > 0
+      const missing = !premiumValid || ![form.companyName, form.planName, form.scheme, form.city, form.portabilityOrFresh, form.tenure]
+        .every((v) => v?.trim())
+      if (missing) {
+        toast.error('Premium, Company Name, Plan Name, Scheme, City, Portability/Fresh, and Tenure are all required to close a sale')
+        return
+      }
+    }
+    onSave({
+      channel: form.channel,
+      outcome: form.outcome,
+      notes: form.notes,
+      followUpDate: form.followUpDate,
+      premium: isSaleClose ? Number(form.premium) : undefined,
+      companyName: isSaleClose ? form.companyName : undefined,
+      planName: isSaleClose ? form.planName : undefined,
+      scheme: isSaleClose ? form.scheme : undefined,
+      city: isSaleClose ? form.city : undefined,
+      portabilityOrFresh: isSaleClose ? form.portabilityOrFresh : undefined,
+      tenure: isSaleClose ? form.tenure : undefined,
+    })
+  }
 
   return (
     <Dialog.Root open={open} onOpenChange={(v) => { if (!v) setForm(EMPTY_FORM); onOpenChange(v) }}>
@@ -85,11 +127,56 @@ function LogActivityDialog({ open, onOpenChange, onSave, loading }: {
                 onChange={(e) => set('notes', e.target.value)}
                 placeholder="What was discussed during this call?" />
             </div>
+
+            {/* Sale Close details — required before a sale can be saved as closed */}
+            {isSaleClose && (
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 space-y-3">
+                <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wide">Sale Details *</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <label className="form-label">Premium (₹)</label>
+                    <input className="form-input" inputMode="decimal" value={form.premium}
+                      onChange={(e) => { if (PREMIUM_PATTERN.test(e.target.value)) set('premium', e.target.value) }}
+                      placeholder="e.g. 25000" />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="form-label">Company Name</label>
+                    <input className="form-input" value={form.companyName ?? ''}
+                      onChange={(e) => set('companyName', e.target.value)} placeholder="e.g. HDFC Ergo" />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="form-label">Plan Name</label>
+                    <input className="form-input" value={form.planName ?? ''}
+                      onChange={(e) => set('planName', e.target.value)} placeholder="e.g. Optima Secure" />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="form-label">Scheme</label>
+                    <input className="form-input" value={form.scheme ?? ''}
+                      onChange={(e) => set('scheme', e.target.value)} placeholder="e.g. Family Floater" />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="form-label">City</label>
+                    <input className="form-input" value={form.city ?? ''}
+                      onChange={(e) => set('city', e.target.value)} placeholder="e.g. Mumbai" />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="form-label">Portability/Fresh</label>
+                    <input className="form-input" value={form.portabilityOrFresh ?? ''}
+                      onChange={(e) => set('portabilityOrFresh', e.target.value)} placeholder="e.g. Fresh" />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="form-label">Tenure</label>
+                    <input className="form-input" value={form.tenure ?? ''}
+                      onChange={(e) => set('tenure', e.target.value)} placeholder="e.g. 1 Year" />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="hs-dialog-footer">
             <Dialog.Close asChild><button className="btn-secondary">Cancel</button></Dialog.Close>
-            <button className="btn-primary" disabled={loading} onClick={() => onSave(form)}>
+            <button className="btn-primary" disabled={loading} onClick={handleSave}>
               {loading
                 ? <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
                 : <><Plus className="h-4 w-4" /> Save</>}
@@ -106,9 +193,10 @@ function LogActivityDialog({ open, onOpenChange, onSave, loading }: {
 interface Props {
   entityId: string
   queryKey: string[]
+  onLogged?: () => void
 }
 
-export function CommunicationTimeline({ entityId, queryKey }: Props) {
+export function CommunicationTimeline({ entityId, queryKey, onLogged }: Props) {
   const { role, userId } = useAuthStore()
   const qc = useQueryClient()
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -138,7 +226,7 @@ export function CommunicationTimeline({ entityId, queryKey }: Props) {
 
   const logMutation = useMutation({
     mutationFn: (d: CreateCommunicationLogRequest) => communicationsApi.logForCustomer(entityId, d),
-    onSuccess: () => { toast.success('Activity logged'); setDialogOpen(false); invalidate() },
+    onSuccess: () => { toast.success('Activity logged'); setDialogOpen(false); invalidate(); onLogged?.() },
     onError: () => toast.error('Failed to log activity'),
   })
 
@@ -208,6 +296,11 @@ export function CommunicationTimeline({ entityId, queryKey }: Props) {
                               <Calendar className="h-3 w-3" /> Follow-up {format(new Date(log.followUpDate), 'dd MMM, h:mm a')}
                             </span>
                           )}
+                          {log.outcome === 'SALE_CLOSE' && log.premium != null && (
+                            <span className="text-xs font-semibold text-emerald-700">
+                              ₹{log.premium.toLocaleString('en-IN')}
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center gap-2 text-[11px] text-[#B0C1D4]">
                           <span>{log.loggedByName}</span>
@@ -233,6 +326,31 @@ export function CommunicationTimeline({ entityId, queryKey }: Props) {
                     {isOpen && log.notes && (
                       <div className="px-4 pb-3 border-t border-[#F5F8FA]">
                         <p className="text-sm text-[#516F90] leading-relaxed pt-2">{log.notes}</p>
+                      </div>
+                    )}
+
+                    {/* Expanded Sale Close details */}
+                    {isOpen && log.outcome === 'SALE_CLOSE' && (
+                      <div className="px-4 pb-3 border-t border-[#F5F8FA]">
+                        <div className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                          <p className="text-[10px] font-semibold text-emerald-700 uppercase tracking-wide mb-2">Sale Details</p>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                            {[
+                              ['Premium', log.premium != null ? `₹${log.premium.toLocaleString('en-IN')}` : null],
+                              ['Company Name', log.companyName],
+                              ['Plan Name', log.planName],
+                              ['Scheme', log.scheme],
+                              ['City', log.city],
+                              ['Portability/Fresh', log.portabilityOrFresh],
+                              ['Tenure', log.tenure],
+                            ].map(([label, value]) => (
+                              <div key={label}>
+                                <p className="text-[10px] font-medium text-emerald-600/70 uppercase tracking-wide">{label}</p>
+                                <p className="text-sm text-[#33475B]">{value ?? '—'}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>

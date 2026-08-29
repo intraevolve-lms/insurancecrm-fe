@@ -80,6 +80,11 @@ function buildStats(summary: DashboardSummary, newLeadCount: number) {
     bg: OUTCOME_STAT_COLORS[outcome].bg,
     color: OUTCOME_STAT_COLORS[outcome].color,
     link: `/customers?outcome=${outcome}`,
+    // Shown as plain text under the count on the Sale Close tile only — same tile, same
+    // position, for both admins and agents (each already scoped to their own total server-side).
+    subtext: outcome === 'SALE_CLOSE'
+      ? `₹${summary.totalSaleClosedThisMonth.toLocaleString('en-IN')} this month`
+      : undefined,
   }))
 
   return [
@@ -134,7 +139,7 @@ export default function DashboardPage() {
 
   const stats = buildStats(summary, newLeadCount) as Array<{
     value: number; label: string; icon: React.ElementType
-    bg: string; color: string; link: string; warn?: boolean
+    bg: string; color: string; link: string; warn?: boolean; subtext?: string
   }>
 
   return (
@@ -147,7 +152,7 @@ export default function DashboardPage() {
 
       {/* Metric cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        {stats.map(({ value, label, icon: Icon, bg, color, link, warn }) => (
+        {stats.map(({ value, label, icon: Icon, bg, color, link, warn, subtext }) => (
           <div
             key={label}
             onClick={() => link && navigate(link)}
@@ -161,6 +166,9 @@ export default function DashboardPage() {
                 {value.toLocaleString()}
               </p>
               <p className="text-[11px] font-medium text-[#516F90] mt-1 leading-tight">{label}</p>
+              {subtext && (
+                <p className="text-[11px] font-normal text-[#516F90] mt-1 leading-tight">{subtext}</p>
+              )}
             </div>
           </div>
         ))}

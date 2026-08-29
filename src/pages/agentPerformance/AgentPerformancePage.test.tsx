@@ -6,12 +6,12 @@ import AgentPerformancePage from './AgentPerformancePage'
 
 const performance: AgentPerformance[] = [
   {
-    agentId: 'a1', agentName: 'Agent One', totalCustomers: 10,
+    agentId: 'a1', agentName: 'Agent One', totalCustomers: 10, newLeads: 6,
     myCallback: 0, callback: 2, prospect: 1, ringing: 3, switchOff: 0, hangUp: 0, nextYear: 0, languageIssue: 5,
     lastActivityAt: '2026-01-05T10:00:00',
   },
   {
-    agentId: 'a2', agentName: 'Agent Two', totalCustomers: 4,
+    agentId: 'a2', agentName: 'Agent Two', totalCustomers: 4, newLeads: 0,
     myCallback: 1, callback: 0, prospect: 0, ringing: 0, switchOff: 0, hangUp: 0, nextYear: 0, languageIssue: 0,
   },
 ]
@@ -39,9 +39,11 @@ describe('AgentPerformancePage', () => {
     expect(screen.getByText('Agent Two')).toBeInTheDocument()
 
     expect(screen.getByRole('columnheader', { name: 'Language Issue' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'New Leads' })).toBeInTheDocument()
 
     const row1 = screen.getByText('Agent One').closest('tr')!
     expect(row1).toHaveTextContent('10') // totalCustomers
+    expect(row1).toHaveTextContent('6')  // newLeads
     expect(row1).toHaveTextContent('3')  // ringing
     expect(row1).toHaveTextContent('2')  // callback
     expect(row1).toHaveTextContent('5')  // languageIssue

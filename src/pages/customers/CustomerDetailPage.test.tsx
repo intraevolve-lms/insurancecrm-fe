@@ -13,7 +13,12 @@ vi.mock('@/api/customers', () => ({
 }))
 
 vi.mock('@/components/shared/CommunicationTimeline', () => ({
-  CommunicationTimeline: () => <div>Communication Timeline Marker</div>,
+  CommunicationTimeline: ({ onLogged }: { onLogged?: () => void }) => (
+    <div>
+      Communication Timeline Marker
+      <button onClick={onLogged}>Simulate Log Saved</button>
+    </div>
+  ),
 }))
 
 const baseCustomer: Customer = {
@@ -92,6 +97,17 @@ describe('CustomerDetailPage', () => {
 
     await waitFor(() => expect(screen.getByText('Alice Sharma')).toBeInTheDocument())
     await user.click(screen.getByRole('button', { name: /back to customers/i }))
+
+    await waitFor(() => expect(screen.getByText('Customers Page Marker')).toBeInTheDocument())
+  })
+
+  it('navigates back to the customers list after an activity is logged', async () => {
+    getById.mockResolvedValueOnce({ success: true, message: 'ok', data: baseCustomer })
+    const user = userEvent.setup()
+    renderPage()
+
+    await waitFor(() => expect(screen.getByText('Alice Sharma')).toBeInTheDocument())
+    await user.click(screen.getByText('Simulate Log Saved'))
 
     await waitFor(() => expect(screen.getByText('Customers Page Marker')).toBeInTheDocument())
   })

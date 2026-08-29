@@ -14,13 +14,14 @@ import { CommunicationTimeline } from '@/components/shared/CommunicationTimeline
 import { BulkAssignDialog } from '@/components/customers/BulkAssignDialog'
 import type { Customer } from '@/types/customer'
 
-const PAGE_SIZE = 20
+const DEFAULT_PAGE_SIZE = 20
 
 export default function NewCustomersPage() {
   const navigate = useNavigate()
   const { role } = useAuthStore()
   const qc = useQueryClient()
   const [page, setPage] = useState(0)
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [activityCustomerId, setActivityCustomerId] = useState<string | null>(null)
   const [search, setSearch]             = useState('')
   const [debouncedSearch, setDebounced] = useState('')
@@ -48,13 +49,18 @@ export default function NewCustomersPage() {
   }
 
   const { data, isLoading } = useQuery({
-    queryKey: ['customers-new', page, debouncedSearch, sortField, sortDir],
+    queryKey: ['customers-new', page, pageSize, debouncedSearch, sortField, sortDir],
     queryFn: () => customersApi.getNew({
-      page, size: PAGE_SIZE,
+      page, size: pageSize,
       q: debouncedSearch.trim() || undefined,
       sortBy: sortField ?? undefined, sortDir,
     }),
   })
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size)
+    setPage(0)
+  }
 
   const { data: agentsData } = useQuery({
     queryKey: ['users'],
@@ -263,8 +269,9 @@ export default function NewCustomersPage() {
             page={page}
             totalPages={totalPages}
             totalElements={totalElements}
-            pageSize={PAGE_SIZE}
+            pageSize={pageSize}
             onPageChange={setPage}
+            onPageSizeChange={handlePageSizeChange}
           />
         </div>
       )}
