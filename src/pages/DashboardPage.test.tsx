@@ -94,15 +94,25 @@ describe('DashboardPage (Overview) — customer-only scope', () => {
     await waitFor(() => expect(screen.getByText('New Customers Page Marker')).toBeInTheDocument())
   })
 
-  it('shows the Sale Closed (This Month) tile formatted as INR currency, and clicking it navigates to the filtered customers list', async () => {
+  it('shows the monthly sale-closed total as plain text on the Sale Close tile itself, not a separate tile', async () => {
     const user = userEvent.setup()
     renderDashboard()
 
-    await waitFor(() => expect(screen.getByText('Sale Closed (This Month)')).toBeInTheDocument())
-    expect(screen.getByText('₹40,000')).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByText('Sale Close')).toBeInTheDocument())
+    expect(screen.queryByText('Sale Closed (This Month)')).not.toBeInTheDocument()
+    expect(screen.getByText('₹40,000 this month')).toBeInTheDocument()
 
-    await user.click(screen.getByText('Sale Closed (This Month)'))
+    // Same tile still counts customers currently in Sale Close state, and still links through.
+    await user.click(screen.getByText('Sale Close'))
 
     await waitFor(() => expect(screen.getByText('Customers Page Marker')).toBeInTheDocument())
+  })
+
+  it('only the Sale Close tile shows the monthly total subtext — other tiles do not', async () => {
+    renderDashboard()
+
+    await waitFor(() => expect(screen.getByText('Ringing')).toBeInTheDocument())
+    const ringingTile = screen.getByText('Ringing').closest('.stat-card')!
+    expect(ringingTile).not.toHaveTextContent('this month')
   })
 })
