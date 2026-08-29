@@ -83,7 +83,7 @@ function buildStats(summary: DashboardSummary, newLeadCount: number) {
     // Shown as plain text under the count on the Sale Close tile only — same tile, same
     // position, for both admins and agents (each already scoped to their own total server-side).
     subtext: outcome === 'SALE_CLOSE'
-      ? `₹${summary.totalSaleClosedThisMonth.toLocaleString('en-IN')} this month`
+      ? `₹${(summary.totalSaleClosedThisMonth ?? 0).toLocaleString('en-IN')} this month`
       : undefined,
   }))
 

@@ -115,4 +115,17 @@ describe('DashboardPage (Overview) — customer-only scope', () => {
     const ringingTile = screen.getByText('Ringing').closest('.stat-card')!
     expect(ringingTile).not.toHaveTextContent('this month')
   })
+
+  it('does not crash if the backend response is missing totalSaleClosedThisMonth (version-skew safety)', async () => {
+    const { totalSaleClosedThisMonth: _omit, ...summaryWithoutSaleTotal } = summary
+    vi.mocked((await import('@/api/dashboard')).dashboardApi.getSummary)
+      .mockResolvedValueOnce({
+        success: true, message: 'ok', timestamp: '2026-01-01T00:00:00',
+        data: summaryWithoutSaleTotal as typeof summary,
+      })
+    renderDashboard()
+
+    await waitFor(() => expect(screen.getByText('Sale Close')).toBeInTheDocument())
+    expect(screen.getByText('₹0 this month')).toBeInTheDocument()
+  })
 })
