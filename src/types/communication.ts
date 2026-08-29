@@ -18,6 +18,14 @@ export interface CommunicationLog {
   outcome: CommunicationOutcome
   notes?: string
   followUpDate?: string
+  // Sale Close details — present only when outcome is SALE_CLOSE.
+  premium?: number
+  companyName?: string
+  planName?: string
+  scheme?: string
+  city?: string
+  portabilityOrFresh?: string
+  tenure?: string
   loggedBy?: string
   loggedByName?: string
   loggedAt: string
@@ -28,4 +36,11 @@ export interface CreateCommunicationLogRequest {
   outcome: CommunicationOutcome
   notes?: string
   followUpDate?: string
+  premium?: number
+  companyName?: string
+  planName?: string
+  scheme?: string
+  city?: string
+  portabilityOrFresh?: string
+  tenure?: string
 }

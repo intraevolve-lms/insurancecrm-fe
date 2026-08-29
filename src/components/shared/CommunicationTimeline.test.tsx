@@ -227,6 +227,100 @@ describe('CommunicationTimeline — log activity dialog', () => {
     })))
   })
 
+  it('selecting Sale Close reveals the Sale Details fields', async () => {
+    const user = userEvent.setup()
+    renderTimeline()
+
+    await waitFor(() => expect(screen.getByText('Ringing')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: /log activity/i }))
+    expect(screen.queryByText('Sale Details *')).not.toBeInTheDocument()
+
+    await user.selectOptions(screen.getByRole('combobox'), 'SALE_CLOSE')
+
+    expect(screen.getByText('Sale Details *')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('e.g. 25000')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('e.g. HDFC Ergo')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('e.g. Optima Secure')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('e.g. Family Floater')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('e.g. Mumbai')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('e.g. Fresh')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('e.g. 1 Year')).toBeInTheDocument()
+  })
+
+  it('the Premium field rejects non-numeric characters as they are typed', async () => {
+    const user = userEvent.setup()
+    renderTimeline()
+
+    await waitFor(() => expect(screen.getByText('Ringing')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: /log activity/i }))
+    await user.selectOptions(screen.getByRole('combobox'), 'SALE_CLOSE')
+
+    const premiumInput = screen.getByPlaceholderText('e.g. 25000')
+    await user.type(premiumInput, 'abc123.5xyz')
+
+    expect(premiumInput).toHaveValue('123.5')
+  })
+
+  it('saving a Sale Close with missing fields is blocked client-side', async () => {
+    const user = userEvent.setup()
+    renderTimeline()
+
+    await waitFor(() => expect(screen.getByText('Ringing')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: /log activity/i }))
+    await user.selectOptions(screen.getByRole('combobox'), 'SALE_CLOSE')
+    await user.click(screen.getByRole('button', { name: /^save$/i }))
+
+    expect(communicationsApi.logForCustomer).not.toHaveBeenCalled()
+    expect(screen.getByRole('heading', { name: 'Log Activity' })).toBeInTheDocument()
+  })
+
+  it('saving a Sale Close with all fields filled sends the sale details, with premium as a number', async () => {
+    const user = userEvent.setup()
+    renderTimeline()
+
+    await waitFor(() => expect(screen.getByText('Ringing')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: /log activity/i }))
+    await user.selectOptions(screen.getByRole('combobox'), 'SALE_CLOSE')
+
+    await user.type(screen.getByPlaceholderText('e.g. 25000'), '25000')
+    await user.type(screen.getByPlaceholderText('e.g. HDFC Ergo'), 'Acme Insurance')
+    await user.type(screen.getByPlaceholderText('e.g. Optima Secure'), 'Gold Plan')
+    await user.type(screen.getByPlaceholderText('e.g. Family Floater'), 'Family Floater')
+    await user.type(screen.getByPlaceholderText('e.g. Mumbai'), 'Mumbai')
+    await user.type(screen.getByPlaceholderText('e.g. Fresh'), 'Fresh')
+    await user.type(screen.getByPlaceholderText('e.g. 1 Year'), '1 Year')
+    await user.click(screen.getByRole('button', { name: /^save$/i }))
+
+    await waitFor(() => expect(communicationsApi.logForCustomer).toHaveBeenCalledWith('c1', expect.objectContaining({
+      outcome: 'SALE_CLOSE',
+      premium: 25000,
+      companyName: 'Acme Insurance',
+      planName: 'Gold Plan',
+      scheme: 'Family Floater',
+      city: 'Mumbai',
+      portabilityOrFresh: 'Fresh',
+      tenure: '1 Year',
+    })))
+  })
+
+  it('switching away from Sale Close before saving does not send stale sale fields', async () => {
+    const user = userEvent.setup()
+    renderTimeline()
+
+    await waitFor(() => expect(screen.getByText('Ringing')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: /log activity/i }))
+    await user.selectOptions(screen.getByRole('combobox'), 'SALE_CLOSE')
+    await user.type(screen.getByPlaceholderText('e.g. 25000'), '25000')
+    await user.type(screen.getByPlaceholderText('e.g. HDFC Ergo'), 'Acme Insurance')
+
+    await user.selectOptions(screen.getByRole('combobox'), 'CALLBACK')
+    await user.click(screen.getByRole('button', { name: /^save$/i }))
+
+    await waitFor(() => expect(communicationsApi.logForCustomer).toHaveBeenCalledWith('c1', expect.objectContaining({
+      outcome: 'CALLBACK', premium: undefined, companyName: undefined,
+    })))
+  })
+
   it('calls onLogged after a successful save', async () => {
     const user = userEvent.setup()
     const onLogged = vi.fn()

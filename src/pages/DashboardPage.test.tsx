@@ -8,6 +8,7 @@ import DashboardPage from './DashboardPage'
 const summary = {
   totalCustomers: 5,
   outcomeCounts: { RINGING: 2, CALLBACK: 1 },
+  totalSaleClosedThisMonth: 40000,
 }
 
 vi.mock('@/api/dashboard', () => ({
@@ -91,5 +92,17 @@ describe('DashboardPage (Overview) — customer-only scope', () => {
     await user.click(screen.getByText('New Lead'))
 
     await waitFor(() => expect(screen.getByText('New Customers Page Marker')).toBeInTheDocument())
+  })
+
+  it('shows the Sale Closed (This Month) tile formatted as INR currency, and clicking it navigates to the filtered customers list', async () => {
+    const user = userEvent.setup()
+    renderDashboard()
+
+    await waitFor(() => expect(screen.getByText('Sale Closed (This Month)')).toBeInTheDocument())
+    expect(screen.getByText('₹40,000')).toBeInTheDocument()
+
+    await user.click(screen.getByText('Sale Closed (This Month)'))
+
+    await waitFor(() => expect(screen.getByText('Customers Page Marker')).toBeInTheDocument())
   })
 })

@@ -85,6 +85,11 @@ function buildStats(summary: DashboardSummary, newLeadCount: number) {
   return [
     { value: summary.totalCustomers, label: 'Total Customers', icon: Users, bg: 'bg-[#E5F5F8]', color: 'text-[#0091AE]', link: '/customers' },
     { value: newLeadCount, label: 'New Lead', icon: UserPlus, bg: 'bg-teal-50', color: 'text-teal-600', link: '/new-customers' },
+    {
+      value: summary.totalSaleClosedThisMonth, label: 'Sale Closed (This Month)', icon: CheckCircle2,
+      bg: 'bg-emerald-50', color: 'text-emerald-600', link: '/customers?outcome=SALE_CLOSE',
+      format: (v: number) => `₹${v.toLocaleString('en-IN')}`,
+    },
     ...outcomeStats,
   ]
 }
@@ -134,7 +139,7 @@ export default function DashboardPage() {
 
   const stats = buildStats(summary, newLeadCount) as Array<{
     value: number; label: string; icon: React.ElementType
-    bg: string; color: string; link: string; warn?: boolean
+    bg: string; color: string; link: string; warn?: boolean; format?: (v: number) => string
   }>
 
   return (
@@ -147,7 +152,7 @@ export default function DashboardPage() {
 
       {/* Metric cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        {stats.map(({ value, label, icon: Icon, bg, color, link, warn }) => (
+        {stats.map(({ value, label, icon: Icon, bg, color, link, warn, format }) => (
           <div
             key={label}
             onClick={() => link && navigate(link)}
@@ -158,7 +163,7 @@ export default function DashboardPage() {
             </div>
             <div>
               <p className={`text-[22px] font-extrabold leading-none ${warn ? 'text-red-600' : 'text-[#33475B]'}`}>
-                {value.toLocaleString()}
+                {format ? format(value) : value.toLocaleString()}
               </p>
               <p className="text-[11px] font-medium text-[#516F90] mt-1 leading-tight">{label}</p>
             </div>
