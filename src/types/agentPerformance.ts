@@ -2,6 +2,7 @@ export interface AgentPerformance {
   agentId: string
   agentName: string
   totalCustomers: number
+  newLeads: number
   myCallback: number
   callback: number
   prospect: number

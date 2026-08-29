@@ -62,6 +62,7 @@ export default function AgentPerformancePage() {
               <tr>
                 <th className="hs-th">Agent</th>
                 <th className="hs-th text-right">Total Customers</th>
+                <th className="hs-th text-right whitespace-nowrap">New Leads</th>
                 {OUTCOME_COLUMNS.map((o) => (
                   <th key={o} className="hs-th text-right whitespace-nowrap">{OUTCOME_META[o].label}</th>
                 ))}
@@ -73,6 +74,9 @@ export default function AgentPerformancePage() {
                 <tr key={a.agentId} className="hs-tr">
                   <td className="hs-td font-semibold text-[#33475B] whitespace-nowrap">{a.agentName}</td>
                   <td className="hs-td text-right text-[#33475B] font-medium">{a.totalCustomers}</td>
+                  <td className="hs-td text-right">
+                    <span className="hs-badge border bg-teal-50 border-teal-200 text-teal-600">{a.newLeads}</span>
+                  </td>
                   {OUTCOME_COLUMNS.map((o) => (
                     <td key={o} className="hs-td text-right">
                       <span className={`hs-badge border ${OUTCOME_META[o].bg} ${OUTCOME_META[o].color}`}>
