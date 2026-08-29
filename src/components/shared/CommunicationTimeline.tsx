@@ -296,6 +296,11 @@ export function CommunicationTimeline({ entityId, queryKey, onLogged }: Props) {
                               <Calendar className="h-3 w-3" /> Follow-up {format(new Date(log.followUpDate), 'dd MMM, h:mm a')}
                             </span>
                           )}
+                          {log.outcome === 'SALE_CLOSE' && log.premium != null && (
+                            <span className="text-xs font-semibold text-emerald-700">
+                              ₹{log.premium.toLocaleString('en-IN')}
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center gap-2 text-[11px] text-[#B0C1D4]">
                           <span>{log.loggedByName}</span>
@@ -321,6 +326,31 @@ export function CommunicationTimeline({ entityId, queryKey, onLogged }: Props) {
                     {isOpen && log.notes && (
                       <div className="px-4 pb-3 border-t border-[#F5F8FA]">
                         <p className="text-sm text-[#516F90] leading-relaxed pt-2">{log.notes}</p>
+                      </div>
+                    )}
+
+                    {/* Expanded Sale Close details */}
+                    {isOpen && log.outcome === 'SALE_CLOSE' && (
+                      <div className="px-4 pb-3 border-t border-[#F5F8FA]">
+                        <div className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                          <p className="text-[10px] font-semibold text-emerald-700 uppercase tracking-wide mb-2">Sale Details</p>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                            {[
+                              ['Premium', log.premium != null ? `₹${log.premium.toLocaleString('en-IN')}` : null],
+                              ['Company Name', log.companyName],
+                              ['Plan Name', log.planName],
+                              ['Scheme', log.scheme],
+                              ['City', log.city],
+                              ['Portability/Fresh', log.portabilityOrFresh],
+                              ['Tenure', log.tenure],
+                            ].map(([label, value]) => (
+                              <div key={label}>
+                                <p className="text-[10px] font-medium text-emerald-600/70 uppercase tracking-wide">{label}</p>
+                                <p className="text-sm text-[#33475B]">{value ?? '—'}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>

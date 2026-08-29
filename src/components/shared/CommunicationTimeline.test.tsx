@@ -349,3 +349,58 @@ describe('CommunicationTimeline — log activity dialog', () => {
     expect(onLogged).not.toHaveBeenCalled()
   })
 })
+
+describe('CommunicationTimeline — viewing Sale Close details', () => {
+  const saleCloseLog: CommunicationLog = {
+    id: 'log-3', customerId: 'c1', channel: 'CALL', outcome: 'SALE_CLOSE',
+    loggedBy: 'agent-1', loggedByName: 'Agent One', loggedAt: '2026-01-06T11:00:00',
+    premium: 25000, companyName: 'Acme Insurance', planName: 'Gold Plan',
+    scheme: 'Family Floater', city: 'Mumbai', portabilityOrFresh: 'Fresh', tenure: '1 Year',
+  }
+
+  beforeEach(() => {
+    useAuthStore.getState().login({
+      token: 't', refreshToken: 'rt', userId: 'agent-1', name: 'Agent One', email: 'a@test.com', role: 'AGENT',
+    })
+    vi.mocked(communicationsApi.getByCustomer).mockResolvedValueOnce({
+      success: true, message: 'ok', data: [saleCloseLog], timestamp: '2026-01-01T00:00:00',
+    })
+  })
+
+  it('shows the premium inline on the collapsed row', async () => {
+    renderTimeline()
+
+    await waitFor(() => expect(screen.getByText('Sale Close')).toBeInTheDocument())
+    expect(screen.getByText('₹25,000')).toBeInTheDocument()
+  })
+
+  it('expanding the log reveals the full Sale Details', async () => {
+    const user = userEvent.setup()
+    renderTimeline()
+
+    await waitFor(() => expect(screen.getByText('Sale Close')).toBeInTheDocument())
+    expect(screen.queryByText('Acme Insurance')).not.toBeInTheDocument()
+
+    await user.click(screen.getByText('Sale Close'))
+
+    expect(screen.getByText('Sale Details')).toBeInTheDocument()
+    expect(screen.getByText('Acme Insurance')).toBeInTheDocument()
+    expect(screen.getByText('Gold Plan')).toBeInTheDocument()
+    expect(screen.getByText('Family Floater')).toBeInTheDocument()
+    expect(screen.getByText('Mumbai')).toBeInTheDocument()
+    expect(screen.getByText('Fresh')).toBeInTheDocument()
+    expect(screen.getByText('1 Year')).toBeInTheDocument()
+  })
+
+  it('collapsing the log hides the Sale Details again', async () => {
+    const user = userEvent.setup()
+    renderTimeline()
+
+    await waitFor(() => expect(screen.getByText('Sale Close')).toBeInTheDocument())
+    await user.click(screen.getByText('Sale Close'))
+    expect(screen.getByText('Acme Insurance')).toBeInTheDocument()
+
+    await user.click(screen.getByText('Sale Close'))
+    expect(screen.queryByText('Acme Insurance')).not.toBeInTheDocument()
+  })
+})
