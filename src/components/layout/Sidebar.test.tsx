@@ -57,3 +57,26 @@ describe('Sidebar — nav items', () => {
     expect(screen.queryByRole('link', { name: /^customers$/i })).not.toBeInTheDocument()
   })
 })
+
+describe('Sidebar — inurek.com attribution', () => {
+  it('shows a "Powered by inurek.com" link pointing at inurek.com, for every role', () => {
+    useAuthStore.getState().login({
+      token: 't', refreshToken: 'rt', userId: 'agent-1', name: 'Agent One', email: 'agent@test.com', role: 'AGENT',
+    })
+    renderSidebar()
+
+    const link = screen.getByRole('link', { name: /powered by inurek\.com/i })
+    expect(link).toHaveAttribute('href', 'https://inurek.com')
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+  })
+
+  it('shows the "© 2026 Inurek" copyright line', () => {
+    useAuthStore.getState().login({
+      token: 't', refreshToken: 'rt', userId: 'agent-1', name: 'Agent One', email: 'agent@test.com', role: 'AGENT',
+    })
+    renderSidebar()
+
+    expect(screen.getByText('© 2026 Inurek')).toBeInTheDocument()
+  })
+})
