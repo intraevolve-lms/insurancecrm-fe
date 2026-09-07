@@ -120,4 +120,10 @@ describe('LoginPage', () => {
       expect(link).toHaveAttribute('rel', 'noopener noreferrer')
     })
   })
+
+  it('shows the "© 2026 Inurek" copyright line', () => {
+    renderPage()
+
+    expect(screen.getAllByText(/© 2026 Inurek/).length).toBeGreaterThan(0)
+  })
 })

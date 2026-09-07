@@ -59,7 +59,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-white/25 text-xs">
-          © 2026 InsuredIndex · All rights reserved · Powered by{' '}
+          © 2026 Inurek · All rights reserved · Powered by{' '}
           <a href="https://inurek.com" target="_blank" rel="noopener noreferrer" className="hover:text-white/50 transition-colors">
             inurek.com
           </a>
@@ -116,7 +116,7 @@ export default function LoginPage() {
           {/* Footer attribution — shown here on mobile, since the brand panel with its own
               footer is desktop-only (hidden lg:flex above). */}
           <p className="mt-6 text-center text-xs text-[#B0C1D4] lg:hidden">
-            Powered by{' '}
+            © 2026 Inurek · All rights reserved · Powered by{' '}
             <a href="https://inurek.com" target="_blank" rel="noopener noreferrer" className="hover:text-[#516F90] transition-colors">
               inurek.com
             </a>

@@ -130,14 +130,17 @@ export function Sidebar({ onClose }: Props) {
           <LogOut className="h-4 w-4" />
           Sign out
         </button>
-        <a
-          href="https://inurek.com"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block text-center text-[10px] text-white/25 hover:text-white/40 transition-colors pt-1"
-        >
-          Powered by inurek.com
-        </a>
+        <div className="text-center text-[10px] text-white/25 pt-1 leading-tight">
+          <p>© 2026 Inurek</p>
+          <a
+            href="https://inurek.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-white/40 transition-colors"
+          >
+            Powered by inurek.com
+          </a>
+        </div>
       </div>
     </aside>
   )

@@ -70,4 +70,13 @@ describe('Sidebar — inurek.com attribution', () => {
     expect(link).toHaveAttribute('target', '_blank')
     expect(link).toHaveAttribute('rel', 'noopener noreferrer')
   })
+
+  it('shows the "© 2026 Inurek" copyright line', () => {
+    useAuthStore.getState().login({
+      token: 't', refreshToken: 'rt', userId: 'agent-1', name: 'Agent One', email: 'agent@test.com', role: 'AGENT',
+    })
+    renderSidebar()
+
+    expect(screen.getByText('© 2026 Inurek')).toBeInTheDocument()
+  })
 })
