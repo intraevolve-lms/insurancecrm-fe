@@ -161,16 +161,14 @@ export default function NewCustomersPage() {
                 {role === 'ADMIN' && <th className="hs-th">Phone</th>}
                 <th className="hs-th">Email</th>
                 <th className="hs-th">Assigned To</th>
-                {role === 'ADMIN' && (
-                  <th className="hs-th">
-                    <button onClick={() => toggleSort('premium')} className="flex items-center gap-1 hover:text-[#0091AE] transition">
-                      Premium
-                      {sortField === 'premium'
-                        ? (sortDir === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)
-                        : <ArrowUpDown className="h-3 w-3 opacity-40" />}
-                    </button>
-                  </th>
-                )}
+                <th className="hs-th">
+                  <button onClick={() => toggleSort('premium')} className="flex items-center gap-1 hover:text-[#0091AE] transition">
+                    Premium
+                    {sortField === 'premium'
+                      ? (sortDir === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)
+                      : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                  </button>
+                </th>
                 <th className="hs-th">
                   <button onClick={() => toggleSort('expiryDate')} className="flex items-center gap-1 hover:text-[#0091AE] transition">
                     Expiry Date
@@ -215,11 +213,9 @@ export default function NewCustomersPage() {
                         <span className="text-xs text-[#B0C1D4] italic">Unassigned</span>
                       )}
                     </td>
-                    {role === 'ADMIN' && (
-                      <td className="hs-td text-[#33475B] font-medium whitespace-nowrap">
-                        {c.lastYearPremium != null ? `₹${c.lastYearPremium.toLocaleString('en-IN')}` : '—'}
-                      </td>
-                    )}
+                    <td className="hs-td text-[#33475B] font-medium whitespace-nowrap">
+                      {c.lastYearPremium != null ? `₹${c.lastYearPremium.toLocaleString('en-IN')}` : '—'}
+                    </td>
                     <td className="hs-td text-[#516F90] whitespace-nowrap">
                       {c.expiryDate ? format(new Date(c.expiryDate), 'dd MMM yyyy') : '—'}
                     </td>
@@ -253,7 +249,7 @@ export default function NewCustomersPage() {
                       of this list on the next fetch, since it no longer matches lastOutcome=null. */}
                   {activityCustomerId === c.id && (
                     <tr>
-                      <td colSpan={role === 'ADMIN' ? 9 : 6} className="bg-[#F5F8FA] px-6 py-4 border-b border-[#DFE3EB]">
+                      <td colSpan={role === 'ADMIN' ? 9 : 7} className="bg-[#F5F8FA] px-6 py-4 border-b border-[#DFE3EB]">
                         <CommunicationTimeline
                           entityId={c.id}
                           queryKey={['customer-comms', c.id]}

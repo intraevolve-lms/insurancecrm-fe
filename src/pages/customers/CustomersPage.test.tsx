@@ -13,7 +13,7 @@ const customers: Customer[] = [
   {
     id: 'c1', name: 'Ringing Customer', phone: '9111111111',
     lastOutcome: 'RINGING', createdAt: '2026-01-01T00:00:00', updatedAt: '2026-01-01T00:00:00',
-    expiryDate: '2026-03-15',
+    expiryDate: '2026-03-15', lastYearPremium: 18500,
   },
   {
     id: 'c2', name: 'Callback Customer', phone: '9222222222',
@@ -198,12 +198,12 @@ describe('CustomersPage — agent filter dropdown also filters the visible table
   })
 })
 
-describe('CustomersPage — Expiry Date column is visible and sortable for every role', () => {
+describe('CustomersPage — Expiry Date and Premium columns are visible for every role', () => {
   beforeEach(() => {
     vi.mocked(customersApi.getAll).mockClear()
   })
 
-  it('an AGENT sees the Expiry Date column and its values, but not Premium', async () => {
+  it('an AGENT sees the Expiry Date and Premium columns, with values', async () => {
     useAuthStore.getState().login({
       token: 't', refreshToken: 'rt', userId: 'agent-1', name: 'Agent One', email: 'a@test.com', role: 'AGENT',
     })
@@ -211,8 +211,9 @@ describe('CustomersPage — Expiry Date column is visible and sortable for every
 
     await waitFor(() => expect(screen.getByText('Ringing Customer')).toBeInTheDocument())
     expect(screen.getByRole('columnheader', { name: /expiry date/i })).toBeInTheDocument()
-    expect(screen.queryByRole('columnheader', { name: /premium/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: /premium/i })).toBeInTheDocument()
     expect(screen.getByText('15 Mar 2026')).toBeInTheDocument()
+    expect(screen.getByText('₹18,500')).toBeInTheDocument()
   })
 
   it('an ADMIN sees both Expiry Date and Premium columns', async () => {
@@ -224,6 +225,7 @@ describe('CustomersPage — Expiry Date column is visible and sortable for every
     await waitFor(() => expect(screen.getByText('Ringing Customer')).toBeInTheDocument())
     expect(screen.getByRole('columnheader', { name: /expiry date/i })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: /premium/i })).toBeInTheDocument()
+    expect(screen.getByText('₹18,500')).toBeInTheDocument()
   })
 
   it('an AGENT can sort by Expiry Date — first click asc, second click desc', async () => {
@@ -245,6 +247,22 @@ describe('CustomersPage — Expiry Date column is visible and sortable for every
     await waitFor(() => {
       const lastCall = vi.mocked(customersApi.getAll).mock.calls.at(-1)?.[0]
       expect(lastCall).toMatchObject({ sortBy: 'expiryDate', sortDir: 'desc' })
+    })
+  })
+
+  it('an AGENT can sort by Premium too', async () => {
+    const user = userEvent.setup()
+    useAuthStore.getState().login({
+      token: 't', refreshToken: 'rt', userId: 'agent-1', name: 'Agent One', email: 'a@test.com', role: 'AGENT',
+    })
+    renderWithProviders('/customers')
+
+    await waitFor(() => expect(screen.getByText('Ringing Customer')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: /premium/i }))
+
+    await waitFor(() => {
+      const lastCall = vi.mocked(customersApi.getAll).mock.calls.at(-1)?.[0]
+      expect(lastCall).toMatchObject({ sortBy: 'premium', sortDir: 'asc' })
     })
   })
 })

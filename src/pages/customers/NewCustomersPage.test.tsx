@@ -83,7 +83,7 @@ describe('NewCustomersPage — rendering and role scoping (mirrors CustomersPage
     expect(screen.getAllByText('01 Jan 2026').length).toBeGreaterThan(0)
   })
 
-  it('an AGENT sees Assigned To but not Phone or Premium', async () => {
+  it('an AGENT sees Assigned To and Premium but not Phone', async () => {
     useAuthStore.getState().login({
       token: 't', refreshToken: 'rt', userId: 'agent-1', name: 'Agent One', email: 'a@test.com', role: 'AGENT',
     })
@@ -93,11 +93,12 @@ describe('NewCustomersPage — rendering and role scoping (mirrors CustomersPage
     expect(screen.getByRole('columnheader', { name: /assigned to/i })).toBeInTheDocument()
     expect(screen.getAllByText('Agent One').length).toBeGreaterThan(0)
     expect(screen.queryByRole('columnheader', { name: /^phone$/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('columnheader', { name: /premium/i })).not.toBeInTheDocument()
     expect(screen.queryByText('9111111111')).not.toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: /premium/i })).toBeInTheDocument()
+    expect(screen.getByText('₹12,000')).toBeInTheDocument()
   })
 
-  it('an ADMIN additionally sees Phone and Premium columns', async () => {
+  it('an ADMIN additionally sees the Phone column', async () => {
     useAuthStore.getState().login({
       token: 't', refreshToken: 'rt', userId: 'admin-1', name: 'Admin One', email: 'admin@test.com', role: 'ADMIN',
     })
@@ -186,8 +187,24 @@ describe('NewCustomersPage — sorting', () => {
     })
   })
 
-  it('clicking the Premium header (ADMIN-only) sorts by premium', async () => {
+  it('clicking the Premium header sorts by premium', async () => {
     const user = userEvent.setup()
+    renderPage()
+
+    await waitFor(() => expect(screen.getByText('Fresh Import One')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: /premium/i }))
+
+    await waitFor(() => {
+      const lastCall = vi.mocked(customersApi.getNew).mock.calls.at(-1)?.[0]
+      expect(lastCall).toMatchObject({ sortBy: 'premium', sortDir: 'asc' })
+    })
+  })
+
+  it('an AGENT can also sort by Premium', async () => {
+    const user = userEvent.setup()
+    useAuthStore.getState().login({
+      token: 't', refreshToken: 'rt', userId: 'agent-1', name: 'Agent One', email: 'a@test.com', role: 'AGENT',
+    })
     renderPage()
 
     await waitFor(() => expect(screen.getByText('Fresh Import One')).toBeInTheDocument())
