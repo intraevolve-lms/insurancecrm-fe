@@ -58,7 +58,12 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <p className="text-white/25 text-xs">© 2026 InsuredIndex · All rights reserved</p>
+        <p className="text-white/25 text-xs">
+          © 2026 InsuredIndex · All rights reserved · Powered by{' '}
+          <a href="https://inurek.com" target="_blank" rel="noopener noreferrer" className="hover:text-white/50 transition-colors">
+            inurek.com
+          </a>
+        </p>
       </div>
 
       {/* ── Right form panel ── */}
@@ -107,6 +112,15 @@ export default function LoginPage() {
                 : <><span className="text-[14px]">Sign in</span> <ArrowRight className="h-4 w-4" /></>}
             </button>
           </div>
+
+          {/* Footer attribution — shown here on mobile, since the brand panel with its own
+              footer is desktop-only (hidden lg:flex above). */}
+          <p className="mt-6 text-center text-xs text-[#B0C1D4] lg:hidden">
+            Powered by{' '}
+            <a href="https://inurek.com" target="_blank" rel="noopener noreferrer" className="hover:text-[#516F90] transition-colors">
+              inurek.com
+            </a>
+          </p>
         </div>
       </div>
     </div>

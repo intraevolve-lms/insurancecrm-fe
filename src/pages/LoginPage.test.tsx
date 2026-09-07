@@ -108,4 +108,16 @@ describe('LoginPage', () => {
 
     await waitFor(() => expect(screen.queryByText('Both fields are required.')).not.toBeInTheDocument())
   })
+
+  it('links to inurek.com in the footer attribution', () => {
+    renderPage()
+
+    const links = screen.getAllByRole('link', { name: /inurek\.com/i })
+    expect(links.length).toBeGreaterThan(0)
+    links.forEach((link) => {
+      expect(link).toHaveAttribute('href', 'https://inurek.com')
+      expect(link).toHaveAttribute('target', '_blank')
+      expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+    })
+  })
 })
