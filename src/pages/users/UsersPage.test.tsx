@@ -26,6 +26,22 @@ vi.mock('@/api/users', () => ({
   },
 }))
 
+const customersGetAll = vi.fn((_params?: unknown) => Promise.resolve({
+  success: true, message: 'ok', timestamp: '2026-01-01T00:00:00',
+  data: { content: [], page: 0, size: 1, totalElements: 0, totalPages: 0 },
+}))
+const reassignAllAgent = vi.fn((_fromAgentId: string, _toAgentId: string) => Promise.resolve({
+  success: true, message: 'ok', timestamp: '2026-01-01T00:00:00',
+  data: { fromAgentId: 'agent-1', toAgentId: 'agent-2', toAgentName: 'Carol Agent', reassignedCount: 0 },
+}))
+
+vi.mock('@/api/customers', () => ({
+  customersApi: {
+    getAll: (params: unknown) => customersGetAll(params),
+    reassignAllAgent: (fromAgentId: string, toAgentId: string) => reassignAllAgent(fromAgentId, toAgentId),
+  },
+}))
+
 const toastSuccess = vi.fn()
 const toastError = vi.fn()
 
@@ -169,6 +185,8 @@ describe('UsersPage — create / edit / deactivate', () => {
     vi.mocked(usersApi.update).mockClear()
     vi.mocked(usersApi.deactivate).mockClear()
     vi.mocked(usersApi.delete).mockClear()
+    customersGetAll.mockClear()
+    reassignAllAgent.mockClear()
     toastSuccess.mockClear()
     toastError.mockClear()
     useAuthStore.getState().login({
@@ -247,9 +265,83 @@ describe('UsersPage — create / edit / deactivate', () => {
     await user.click(within(row).getByRole('button', { name: /deactivate/i }))
 
     expect(screen.getByText(/deactivate "bob agent" \(bob@test\.com\)/i)).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Delete' }))
+    await user.click(screen.getByRole('button', { name: 'Deactivate' }))
 
     await waitFor(() => expect(usersApi.deactivate).toHaveBeenCalledWith('agent-1'))
+    expect(toastSuccess).toHaveBeenCalledWith('User deactivated')
+  })
+
+  it('shows no reassignment warning when the user has zero assigned customers', async () => {
+    const user = userEvent.setup()
+    renderUsersPage()
+
+    await waitFor(() => expect(screen.getByText('Bob Agent')).toBeInTheDocument())
+    const row = screen.getByText('Bob Agent').closest('tr')!
+    await user.click(within(row).getByRole('button', { name: /deactivate/i }))
+
+    await waitFor(() => expect(customersGetAll).toHaveBeenCalledWith({ assignedAgentId: 'agent-1', page: 0, size: 1 }))
+    expect(screen.queryByText(/currently assigned to/i)).not.toBeInTheDocument()
+    expect(reassignAllAgent).not.toHaveBeenCalled()
+  })
+
+  it('warns how many customers are assigned and offers a reassign dropdown when count > 0', async () => {
+    customersGetAll.mockResolvedValueOnce({
+      success: true, message: 'ok', timestamp: '2026-01-01T00:00:00',
+      data: { content: [], page: 0, size: 1, totalElements: 659, totalPages: 659 },
+    })
+    const user = userEvent.setup()
+    renderUsersPage()
+
+    await waitFor(() => expect(screen.getByText('Bob Agent')).toBeInTheDocument())
+    const row = screen.getByText('Bob Agent').closest('tr')!
+    await user.click(within(row).getByRole('button', { name: /deactivate/i }))
+
+    await waitFor(() => expect(screen.getByText(/659 customers are currently assigned to bob agent/i)).toBeInTheDocument())
+    expect(screen.getByRole('combobox')).toBeInTheDocument()
+  })
+
+  it('reassigning to another agent before deactivating calls reassignAllAgent then deactivate, with a combined success toast', async () => {
+    customersGetAll.mockResolvedValueOnce({
+      success: true, message: 'ok', timestamp: '2026-01-01T00:00:00',
+      data: { content: [], page: 0, size: 1, totalElements: 659, totalPages: 659 },
+    })
+    reassignAllAgent.mockResolvedValueOnce({
+      success: true, message: 'ok', timestamp: '2026-01-01T00:00:00',
+      data: { fromAgentId: 'agent-1', toAgentId: 'agent-2', toAgentName: 'Carol Agent', reassignedCount: 659 },
+    })
+    const user = userEvent.setup()
+    renderUsersPage()
+
+    await waitFor(() => expect(screen.getByText('Bob Agent')).toBeInTheDocument())
+    const row = screen.getByText('Bob Agent').closest('tr')!
+    await user.click(within(row).getByRole('button', { name: /deactivate/i }))
+
+    await waitFor(() => expect(screen.getByRole('combobox')).toBeInTheDocument())
+    await user.selectOptions(screen.getByRole('combobox'), 'agent-2')
+    await user.click(screen.getByRole('button', { name: 'Deactivate' }))
+
+    await waitFor(() => expect(reassignAllAgent).toHaveBeenCalledWith('agent-1', 'agent-2'))
+    expect(usersApi.deactivate).toHaveBeenCalledWith('agent-1')
+    expect(toastSuccess).toHaveBeenCalledWith('659 customers reassigned to Carol Agent. User deactivated.')
+  })
+
+  it('leaving the reassign dropdown on "Leave unassigned" does not call reassignAllAgent', async () => {
+    customersGetAll.mockResolvedValueOnce({
+      success: true, message: 'ok', timestamp: '2026-01-01T00:00:00',
+      data: { content: [], page: 0, size: 1, totalElements: 659, totalPages: 659 },
+    })
+    const user = userEvent.setup()
+    renderUsersPage()
+
+    await waitFor(() => expect(screen.getByText('Bob Agent')).toBeInTheDocument())
+    const row = screen.getByText('Bob Agent').closest('tr')!
+    await user.click(within(row).getByRole('button', { name: /deactivate/i }))
+
+    await waitFor(() => expect(screen.getByRole('combobox')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: 'Deactivate' }))
+
+    await waitFor(() => expect(usersApi.deactivate).toHaveBeenCalledWith('agent-1'))
+    expect(reassignAllAgent).not.toHaveBeenCalled()
     expect(toastSuccess).toHaveBeenCalledWith('User deactivated')
   })
 

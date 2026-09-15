@@ -11,6 +11,7 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { LoadingSpinner } from '@/components/shared/LoadingSpinner'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
+import { OffboardUserDialog } from '@/components/users/OffboardUserDialog'
 import type { User, Role } from '@/types/auth'
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -138,6 +139,19 @@ export default function UsersPage() {
   const users: User[] = data?.data ?? []
   const invalidate = () => qc.invalidateQueries({ queryKey: ['users'] })
 
+  // Deactivating/deleting a user can also reassign a whole book of customers (see
+  // OffboardUserDialog) — every page that reads customer/agent data needs to refetch, not just
+  // the user list, or they'd keep showing stale ownership until their own staleTime lapses.
+  const invalidateAfterOffboard = () => {
+    setDeactivateTarget(null)
+    setDeleteTarget(null)
+    qc.invalidateQueries({ queryKey: ['users'] })
+    qc.invalidateQueries({ queryKey: ['customers'] })
+    qc.invalidateQueries({ queryKey: ['customers-new'] })
+    qc.invalidateQueries({ queryKey: ['agent-performance'] })
+    qc.invalidateQueries({ queryKey: ['dashboard'] })
+  }
+
   const createMutation = useMutation({
     mutationFn: (d: CreateUserRequest) => usersApi.create(d),
     onSuccess: () => { toast.success('User created'); setDialogOpen(false); invalidate() },
@@ -149,18 +163,6 @@ export default function UsersPage() {
       usersApi.update(id, data),
     onSuccess: () => { toast.success('User updated'); setDialogOpen(false); invalidate() },
     onError: () => toast.error('Failed to update user'),
-  })
-
-  const deactivateMutation = useMutation({
-    mutationFn: (id: string) => usersApi.deactivate(id),
-    onSuccess: () => { toast.success('User deactivated'); setDeactivateTarget(null); invalidate() },
-    onError: () => toast.error('Failed to deactivate user'),
-  })
-
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => usersApi.delete(id),
-    onSuccess: () => { toast.success('User permanently deleted'); setDeleteTarget(null); invalidate() },
-    onError: () => toast.error('Failed to delete user'),
   })
 
   const forceLogoutMutation = useMutation({
@@ -334,25 +336,20 @@ export default function UsersPage() {
         loading={isSaving}
       />
 
-      <ConfirmDialog
-        open={!!deactivateTarget}
+      <OffboardUserDialog
+        target={deactivateTarget}
+        action="deactivate"
+        agents={users}
         onOpenChange={(v) => { if (!v) setDeactivateTarget(null) }}
-        title="Deactivate User"
-        description={`Deactivate "${deactivateTarget?.name}" (${deactivateTarget?.email})? They will lose access to the system.`}
-        onConfirm={() => deactivateTarget && deactivateMutation.mutate(deactivateTarget.id)}
-        loading={deactivateMutation.isPending}
-        destructive
+        onDone={invalidateAfterOffboard}
       />
 
-      <ConfirmDialog
-        open={!!deleteTarget}
+      <OffboardUserDialog
+        target={deleteTarget}
+        action="delete"
+        agents={users}
         onOpenChange={(v) => { if (!v) setDeleteTarget(null) }}
-        title="Delete User Permanently"
-        description={`Permanently delete "${deleteTarget?.name}" (${deleteTarget?.email})? This cannot be undone — their account and login are gone for good. The email will become available for a new account.`}
-        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
-        loading={deleteMutation.isPending}
-        destructive
-        confirmLabel="Delete Permanently"
+        onDone={invalidateAfterOffboard}
       />
 
       <ConfirmDialog
