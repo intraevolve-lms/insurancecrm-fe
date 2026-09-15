@@ -16,8 +16,12 @@ async function downloadBlob(url: string, params: Record<string, string>, filenam
 }
 
 export const exportApi = {
-  exportCustomers: (agentId?: string) =>
-    downloadBlob('/export/customers', agentId ? { agentId } : {}, `customers_${today()}.xlsx`),
+  exportCustomers: (agentId?: string, unassigned?: boolean) =>
+    downloadBlob(
+      '/export/customers',
+      { ...(agentId ? { agentId } : {}), ...(unassigned ? { unassigned: 'true' } : {}) },
+      `customers_${today()}.xlsx`,
+    ),
 }
 
 function today() {

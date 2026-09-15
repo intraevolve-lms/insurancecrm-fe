@@ -10,6 +10,7 @@ export interface CustomerListParams {
   sortDir?: 'asc' | 'desc'
   outcome?: CommunicationOutcome
   assignedAgentId?: string
+  unassigned?: boolean
 }
 
 export interface NewCustomersParams {

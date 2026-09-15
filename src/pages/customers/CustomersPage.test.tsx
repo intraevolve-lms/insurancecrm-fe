@@ -179,7 +179,24 @@ describe('CustomersPage — agent filter dropdown also filters the visible table
     await user.selectOptions(screen.getByTitle(/filter by agent/i), 'a1')
     await user.click(screen.getByRole('button', { name: 'Export' }))
 
-    await waitFor(() => expect(exportApi.exportCustomers).toHaveBeenCalledWith('a1'))
+    await waitFor(() => expect(exportApi.exportCustomers).toHaveBeenCalledWith('a1', false))
+  })
+
+  it('selecting "Unassigned" filters the list and scopes Export by the unassigned flag, not an agent id', async () => {
+    const user = userEvent.setup()
+    renderWithProviders('/customers')
+
+    await waitFor(() => expect(screen.getByText('Ringing Customer')).toBeInTheDocument())
+    vi.mocked(customersApi.getAll).mockClear()
+    await user.selectOptions(screen.getByTitle(/filter by agent/i), 'Unassigned')
+
+    await waitFor(() => {
+      const lastCall = vi.mocked(customersApi.getAll).mock.calls.at(-1)?.[0]
+      expect(lastCall).toMatchObject({ unassigned: true, assignedAgentId: undefined })
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Export' }))
+    await waitFor(() => expect(exportApi.exportCustomers).toHaveBeenCalledWith(undefined, true))
   })
 
   it('resetting back to "All Agents" restores the full list', async () => {

@@ -21,6 +21,10 @@ import type { Customer, CreateCustomerRequest } from '@/types/customer'
 import type { CommunicationOutcome } from '@/types/communication'
 
 const DEFAULT_PAGE_SIZE = 20
+// Sentinel value for the agent filter dropdown — matches neither a real agent's id nor "" (All
+// Agents). Selecting it surfaces customers with no resolvable agent: never assigned, or assigned
+// to an agent whose account has since been permanently deleted.
+const UNASSIGNED_FILTER = '__unassigned__'
 
 const EMPTY_FORM: CreateCustomerRequest = {
   name: '', phone: '', email: '', address: '', notes: '',
@@ -152,11 +156,13 @@ export default function CustomersPage() {
     setPage(0)
   }, [debouncedSearch, outcomeFilter, sortField, sortDir, agentFilter])
 
+  const isUnassignedFilter = agentFilter === UNASSIGNED_FILTER
   const listParams = {
     page, size: pageSize,
     sortBy: sortField ?? undefined, sortDir,
     outcome: outcomeFilter ?? undefined,
-    assignedAgentId: agentFilter || undefined,
+    assignedAgentId: !isUnassignedFilter && agentFilter ? agentFilter : undefined,
+    unassigned: isUnassignedFilter || undefined,
   }
 
   const { data, isLoading } = useQuery({
@@ -289,9 +295,15 @@ export default function CustomersPage() {
                   title="Filter by agent (also scopes Export)"
                 >
                   <option value="">All Agents</option>
+                  <option value={UNASSIGNED_FILTER}>Unassigned</option>
                   {agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                 </select>
-                <button onClick={() => exportApi.exportCustomers(agentFilter || undefined).catch(() => toast.error('Export failed'))} className="btn-secondary">
+                <button
+                  onClick={() => exportApi
+                    .exportCustomers(!isUnassignedFilter && agentFilter ? agentFilter : undefined, isUnassignedFilter)
+                    .catch(() => toast.error('Export failed'))}
+                  className="btn-secondary"
+                >
                   <Download className="h-4 w-4" /> Export
                 </button>
                 <button onClick={() => setImportOpen(true)} className="btn-secondary">
