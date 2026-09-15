@@ -1,6 +1,6 @@
 import api from '@/lib/axios'
 import type { ApiResponse, BulkDeleteResult, PagedResponse } from '@/types/api'
-import type { Customer, CreateCustomerRequest, BulkAssignResult } from '@/types/customer'
+import type { Customer, CreateCustomerRequest, BulkAssignResult, ReassignAllResult } from '@/types/customer'
 import type { CommunicationOutcome } from '@/types/communication'
 
 export interface CustomerListParams {
@@ -10,6 +10,7 @@ export interface CustomerListParams {
   sortDir?: 'asc' | 'desc'
   outcome?: CommunicationOutcome
   assignedAgentId?: string
+  unassigned?: boolean
 }
 
 export interface NewCustomersParams {
@@ -36,6 +37,8 @@ export const customersApi = {
     api.patch<ApiResponse<Customer>>(`/customers/${customerId}/assign/${agentId}`).then((r) => r.data),
   bulkAssignAgent: (customerIds: string[], agentId: string) =>
     api.patch<ApiResponse<BulkAssignResult>>('/customers/bulk-assign', { customerIds, agentId }).then((r) => r.data),
+  reassignAllAgent: (fromAgentId: string, toAgentId: string) =>
+    api.patch<ApiResponse<ReassignAllResult>>('/customers/reassign-all', { fromAgentId, toAgentId }).then((r) => r.data),
   delete: (id: string) => api.delete<ApiResponse<void>>(`/customers/${id}`).then((r) => r.data),
   bulkDelete: (ids: string[]) =>
     api.delete<ApiResponse<BulkDeleteResult>>('/customers/bulk-delete', { data: { ids } }).then((r) => r.data),

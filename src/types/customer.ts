@@ -41,3 +41,10 @@ export interface BulkAssignResult {
   notFoundCustomerIds: string[]
   customers: Customer[]
 }
+
+export interface ReassignAllResult {
+  fromAgentId: string
+  toAgentId: string
+  toAgentName: string
+  reassignedCount: number
+}
